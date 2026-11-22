@@ -1,0 +1,780 @@
+{
+  "number": 1,
+  "testedCommit": "6e196ba390af6a84b928b8329bc8631e6d660480",
+  "outcome": "pass",
+  "flows": [
+    {
+      "name": "poll-create.md",
+      "outcome": "pass",
+      "reason": "passed",
+      "verdict": null,
+      "steps": 32,
+      "credits": 36.682854999999996,
+      "seconds": 107.8,
+      "trace": [
+        {
+          "file": "app/server.mjs",
+          "line": 20,
+          "name": "createServer",
+          "status": "current",
+          "explanation": "Creates the HTTP server for the poll app. Every request it receives goes to the request handler, which uses the given data file for storage."
+        },
+        {
+          "file": "app/server.mjs",
+          "line": 22,
+          "name": "handleRequest",
+          "status": "current",
+          "explanation": "Hands each incoming request to serveRequest. The handler does not wait for it, because serveRequest sends the response itself."
+        },
+        {
+          "file": "app/server.mjs",
+          "line": 27,
+          "name": "closeServer",
+          "status": "current",
+          "explanation": "Stops accepting new connections, closes open ones, and exits the process with code 0 once the server has closed."
+        },
+        {
+          "file": "app/server.mjs",
+          "line": 29,
+          "name": "exitAfterClose",
+          "status": "current",
+          "explanation": "Exits the process with code 0 once the server has finished closing."
+        },
+        {
+          "file": "app/server.mjs",
+          "line": 34,
+          "name": "serveRequest",
+          "status": "current",
+          "explanation": "Routes one request and turns any error into a response. Known errors send their own status code, and anything else becomes a 500 that the server logs."
+        },
+        {
+          "file": "app/server.mjs",
+          "line": 51,
+          "name": "routeRequest",
+          "status": "current",
+          "explanation": "Matches the request method and path to the right handler: the page, the poll list, creating a poll, or voting. Unknown routes get a 404."
+        },
+        {
+          "file": "app/server.mjs",
+          "line": 70,
+          "name": "ensureVoter",
+          "status": "current",
+          "explanation": "Returns the voter id from the browser cookie. A browser without a valid cookie gets a new id, and the response sets the cookie."
+        },
+        {
+          "file": "app/server.mjs",
+          "line": 78,
+          "name": "readCookie",
+          "status": "current",
+          "explanation": "Finds one named value in a Cookie header and returns it, or null when the cookie is missing."
+        },
+        {
+          "file": "app/server.mjs",
+          "line": 87,
+          "name": "sendStatic",
+          "status": "current",
+          "explanation": "Sends one file from the public folder with its content type and a no-store cache header."
+        },
+        {
+          "file": "app/server.mjs",
+          "line": 93,
+          "name": "sendPolls",
+          "status": "current",
+          "explanation": "Reads the poll list from the data file and sends it to the browser in the public shape."
+        },
+        {
+          "file": "app/server.mjs",
+          "line": 98,
+          "name": "addPollRoute",
+          "status": "current",
+          "explanation": "Reads the new poll from the request body and saves it. It answers 201 with the poll, or 400 with the validation message when the input is not usable."
+        },
+        {
+          "file": "app/server.mjs",
+          "line": 119,
+          "name": "readJsonBody",
+          "status": "current",
+          "explanation": "Reads the request body, enforces a 10 KB size limit, and parses it as JSON. An empty body counts as an empty object. A body that is too large or not valid JSON becomes an error with a status code."
+        },
+        {
+          "file": "app/server.mjs",
+          "line": 136,
+          "name": "runExclusive",
+          "status": "current",
+          "explanation": "Runs one data task after the task before it finishes, so two writes never overlap. It returns the result of the task, or its error."
+        },
+        {
+          "file": "app/server.mjs",
+          "line": 139,
+          "name": "holdQueue",
+          "status": "current",
+          "explanation": "Stores the release function for the current task, so the next queued task waits until this one finishes."
+        },
+        {
+          "file": "app/server.mjs",
+          "line": 142,
+          "name": "runTask",
+          "status": "current",
+          "explanation": "Runs the queued data task once the task before it has finished."
+        },
+        {
+          "file": "app/server.mjs",
+          "line": 144,
+          "name": "releaseQueue",
+          "status": "current",
+          "explanation": "Releases the queue after the task finishes, whether it succeeded or failed, so the next queued task can start."
+        },
+        {
+          "file": "app/server.mjs",
+          "line": 149,
+          "name": "addPollTask",
+          "status": "current",
+          "explanation": "Loads the poll list, adds the new poll, saves the list, and returns the new poll. It runs inside the write queue."
+        },
+        {
+          "file": "app/server.mjs",
+          "line": 163,
+          "name": "sendJson",
+          "status": "current",
+          "explanation": "Sends a JSON response with the given status code and a correct content length."
+        },
+        {
+          "file": "app/server.mjs",
+          "line": 176,
+          "name": "startFromEnvironment",
+          "status": "current",
+          "explanation": "Reads PORT and DATA_FILE from the environment, starts the server, and stops it cleanly on SIGTERM or SIGINT."
+        },
+        {
+          "file": "app/server.mjs",
+          "line": 180,
+          "name": "stopOnSignal",
+          "status": "current",
+          "explanation": "Closes the server when the process gets SIGTERM or SIGINT, so the process exits cleanly with code 0."
+        },
+        {
+          "file": "app/server.mjs",
+          "line": 185,
+          "name": "announceListening",
+          "status": "current",
+          "explanation": "Prints the address the server listens on once the port is open."
+        },
+        {
+          "file": "app/store.mjs",
+          "line": 10,
+          "name": "loadPolls",
+          "status": "current",
+          "explanation": "Reads the poll list from the JSON data file. A missing file counts as an empty list, and a file that does not hold a list is an error."
+        },
+        {
+          "file": "app/store.mjs",
+          "line": 23,
+          "name": "savePolls",
+          "status": "current",
+          "explanation": "Writes the poll list to the data file. It writes a temporary file first and then renames it, so a crash cannot leave a half-written file."
+        },
+        {
+          "file": "app/store.mjs",
+          "line": 30,
+          "name": "createPoll",
+          "status": "current",
+          "explanation": "Checks the question and options, adds a new poll with zero votes to the list, and returns it. It throws a validation error when the input is not usable."
+        },
+        {
+          "file": "app/store.mjs",
+          "line": 61,
+          "name": "listPolls",
+          "status": "current",
+          "explanation": "Returns every poll in a form safe to send to the browser, without voter ids."
+        },
+        {
+          "file": "app/store.mjs",
+          "line": 65,
+          "name": "publicPoll",
+          "status": "current",
+          "explanation": "Copies one poll into the public shape: id, question, option tallies, total votes, and the creation time."
+        },
+        {
+          "file": "app/store.mjs",
+          "line": 75,
+          "name": "cleanText",
+          "status": "current",
+          "explanation": "Trims a text value and rejects it when it is missing, empty, not text, or longer than the limit."
+        },
+        {
+          "file": "app/store.mjs",
+          "line": 83,
+          "name": "cleanOptions",
+          "status": "current",
+          "explanation": "Checks that the options are a list of two to ten valid option labels, and returns them cleaned."
+        },
+        {
+          "file": "app/store.mjs",
+          "line": 91,
+          "name": "cleanOption",
+          "status": "current",
+          "explanation": "Cleans one option label using the option length limit."
+        },
+        {
+          "file": "app/store.mjs",
+          "line": 95,
+          "name": "startTally",
+          "status": "current",
+          "explanation": "Turns one option label into a tally with zero votes."
+        },
+        {
+          "file": "app/store.mjs",
+          "line": 99,
+          "name": "copyTally",
+          "status": "current",
+          "explanation": "Copies one option tally so that callers cannot change the stored poll."
+        },
+        {
+          "file": "app/store.mjs",
+          "line": 103,
+          "name": "addVotes",
+          "status": "current",
+          "explanation": "Adds the votes of one option to a running total. It counts all votes in a poll."
+        },
+        {
+          "file": "app/store.mjs",
+          "line": 107,
+          "name": "invalid",
+          "status": "current",
+          "explanation": "Builds a validation error with the given message and the name ValidationError, so the server can answer with a 400 response."
+        }
+      ]
+    },
+    {
+      "name": "poll-vote.md",
+      "outcome": "pass",
+      "reason": "passed",
+      "verdict": null,
+      "steps": 24,
+      "credits": 27.410499999999995,
+      "seconds": 84.9,
+      "trace": [
+        {
+          "file": "app/server.mjs",
+          "line": 20,
+          "name": "createServer",
+          "status": "current",
+          "explanation": "Creates the HTTP server for the poll app. Every request it receives goes to the request handler, which uses the given data file for storage."
+        },
+        {
+          "file": "app/server.mjs",
+          "line": 22,
+          "name": "handleRequest",
+          "status": "current",
+          "explanation": "Hands each incoming request to serveRequest. The handler does not wait for it, because serveRequest sends the response itself."
+        },
+        {
+          "file": "app/server.mjs",
+          "line": 27,
+          "name": "closeServer",
+          "status": "current",
+          "explanation": "Stops accepting new connections, closes open ones, and exits the process with code 0 once the server has closed."
+        },
+        {
+          "file": "app/server.mjs",
+          "line": 29,
+          "name": "exitAfterClose",
+          "status": "current",
+          "explanation": "Exits the process with code 0 once the server has finished closing."
+        },
+        {
+          "file": "app/server.mjs",
+          "line": 34,
+          "name": "serveRequest",
+          "status": "current",
+          "explanation": "Routes one request and turns any error into a response. Known errors send their own status code, and anything else becomes a 500 that the server logs."
+        },
+        {
+          "file": "app/server.mjs",
+          "line": 51,
+          "name": "routeRequest",
+          "status": "current",
+          "explanation": "Matches the request method and path to the right handler: the page, the poll list, creating a poll, or voting. Unknown routes get a 404."
+        },
+        {
+          "file": "app/server.mjs",
+          "line": 70,
+          "name": "ensureVoter",
+          "status": "current",
+          "explanation": "Returns the voter id from the browser cookie. A browser without a valid cookie gets a new id, and the response sets the cookie."
+        },
+        {
+          "file": "app/server.mjs",
+          "line": 78,
+          "name": "readCookie",
+          "status": "current",
+          "explanation": "Finds one named value in a Cookie header and returns it, or null when the cookie is missing."
+        },
+        {
+          "file": "app/server.mjs",
+          "line": 87,
+          "name": "sendStatic",
+          "status": "current",
+          "explanation": "Sends one file from the public folder with its content type and a no-store cache header."
+        },
+        {
+          "file": "app/server.mjs",
+          "line": 93,
+          "name": "sendPolls",
+          "status": "current",
+          "explanation": "Reads the poll list from the data file and sends it to the browser in the public shape."
+        },
+        {
+          "file": "app/server.mjs",
+          "line": 98,
+          "name": "addPollRoute",
+          "status": "current",
+          "explanation": "Reads the new poll from the request body and saves it. It answers 201 with the poll, or 400 with the validation message when the input is not usable."
+        },
+        {
+          "file": "app/server.mjs",
+          "line": 109,
+          "name": "votePollRoute",
+          "status": "current",
+          "explanation": "Reads the chosen option from the request body and records the vote. It answers 200 with the updated poll, or the matching error status for an unknown poll, a bad option, or a repeat vote."
+        },
+        {
+          "file": "app/server.mjs",
+          "line": 119,
+          "name": "readJsonBody",
+          "status": "current",
+          "explanation": "Reads the request body, enforces a 10 KB size limit, and parses it as JSON. An empty body counts as an empty object. A body that is too large or not valid JSON becomes an error with a status code."
+        },
+        {
+          "file": "app/server.mjs",
+          "line": 136,
+          "name": "runExclusive",
+          "status": "current",
+          "explanation": "Runs one data task after the task before it finishes, so two writes never overlap. It returns the result of the task, or its error."
+        },
+        {
+          "file": "app/server.mjs",
+          "line": 139,
+          "name": "holdQueue",
+          "status": "current",
+          "explanation": "Stores the release function for the current task, so the next queued task waits until this one finishes."
+        },
+        {
+          "file": "app/server.mjs",
+          "line": 142,
+          "name": "runTask",
+          "status": "current",
+          "explanation": "Runs the queued data task once the task before it has finished."
+        },
+        {
+          "file": "app/server.mjs",
+          "line": 144,
+          "name": "releaseQueue",
+          "status": "current",
+          "explanation": "Releases the queue after the task finishes, whether it succeeded or failed, so the next queued task can start."
+        },
+        {
+          "file": "app/server.mjs",
+          "line": 149,
+          "name": "addPollTask",
+          "status": "current",
+          "explanation": "Loads the poll list, adds the new poll, saves the list, and returns the new poll. It runs inside the write queue."
+        },
+        {
+          "file": "app/server.mjs",
+          "line": 156,
+          "name": "castVoteTask",
+          "status": "current",
+          "explanation": "Loads the poll list, records the vote, and saves the list only when the vote counted. It returns the outcome and the updated poll."
+        },
+        {
+          "file": "app/server.mjs",
+          "line": 163,
+          "name": "sendJson",
+          "status": "current",
+          "explanation": "Sends a JSON response with the given status code and a correct content length."
+        },
+        {
+          "file": "app/server.mjs",
+          "line": 176,
+          "name": "startFromEnvironment",
+          "status": "current",
+          "explanation": "Reads PORT and DATA_FILE from the environment, starts the server, and stops it cleanly on SIGTERM or SIGINT."
+        },
+        {
+          "file": "app/server.mjs",
+          "line": 180,
+          "name": "stopOnSignal",
+          "status": "current",
+          "explanation": "Closes the server when the process gets SIGTERM or SIGINT, so the process exits cleanly with code 0."
+        },
+        {
+          "file": "app/server.mjs",
+          "line": 185,
+          "name": "announceListening",
+          "status": "current",
+          "explanation": "Prints the address the server listens on once the port is open."
+        },
+        {
+          "file": "app/store.mjs",
+          "line": 10,
+          "name": "loadPolls",
+          "status": "current",
+          "explanation": "Reads the poll list from the JSON data file. A missing file counts as an empty list, and a file that does not hold a list is an error."
+        },
+        {
+          "file": "app/store.mjs",
+          "line": 23,
+          "name": "savePolls",
+          "status": "current",
+          "explanation": "Writes the poll list to the data file. It writes a temporary file first and then renames it, so a crash cannot leave a half-written file."
+        },
+        {
+          "file": "app/store.mjs",
+          "line": 30,
+          "name": "createPoll",
+          "status": "current",
+          "explanation": "Checks the question and options, adds a new poll with zero votes to the list, and returns it. It throws a validation error when the input is not usable."
+        },
+        {
+          "file": "app/store.mjs",
+          "line": 42,
+          "name": "castVote",
+          "status": "current",
+          "explanation": "Records one vote for an option in a poll. It refuses an unknown poll, an option that does not exist, and a second vote from the same voter."
+        },
+        {
+          "file": "app/store.mjs",
+          "line": 54,
+          "name": "findPoll",
+          "status": "current",
+          "explanation": "Returns the poll with the given id from the list, or null when no poll has that id."
+        },
+        {
+          "file": "app/store.mjs",
+          "line": 61,
+          "name": "listPolls",
+          "status": "current",
+          "explanation": "Returns every poll in a form safe to send to the browser, without voter ids."
+        },
+        {
+          "file": "app/store.mjs",
+          "line": 65,
+          "name": "publicPoll",
+          "status": "current",
+          "explanation": "Copies one poll into the public shape: id, question, option tallies, total votes, and the creation time."
+        },
+        {
+          "file": "app/store.mjs",
+          "line": 75,
+          "name": "cleanText",
+          "status": "current",
+          "explanation": "Trims a text value and rejects it when it is missing, empty, not text, or longer than the limit."
+        },
+        {
+          "file": "app/store.mjs",
+          "line": 83,
+          "name": "cleanOptions",
+          "status": "current",
+          "explanation": "Checks that the options are a list of two to ten valid option labels, and returns them cleaned."
+        },
+        {
+          "file": "app/store.mjs",
+          "line": 91,
+          "name": "cleanOption",
+          "status": "current",
+          "explanation": "Cleans one option label using the option length limit."
+        },
+        {
+          "file": "app/store.mjs",
+          "line": 95,
+          "name": "startTally",
+          "status": "current",
+          "explanation": "Turns one option label into a tally with zero votes."
+        },
+        {
+          "file": "app/store.mjs",
+          "line": 99,
+          "name": "copyTally",
+          "status": "current",
+          "explanation": "Copies one option tally so that callers cannot change the stored poll."
+        },
+        {
+          "file": "app/store.mjs",
+          "line": 103,
+          "name": "addVotes",
+          "status": "current",
+          "explanation": "Adds the votes of one option to a running total. It counts all votes in a poll."
+        }
+      ]
+    },
+    {
+      "name": "poll-vote-once.md",
+      "outcome": "pass",
+      "reason": "passed",
+      "verdict": null,
+      "steps": 32,
+      "credits": 32.54833,
+      "seconds": 91.8,
+      "trace": [
+        {
+          "file": "app/server.mjs",
+          "line": 20,
+          "name": "createServer",
+          "status": "current",
+          "explanation": "Creates the HTTP server for the poll app. Every request it receives goes to the request handler, which uses the given data file for storage."
+        },
+        {
+          "file": "app/server.mjs",
+          "line": 22,
+          "name": "handleRequest",
+          "status": "current",
+          "explanation": "Hands each incoming request to serveRequest. The handler does not wait for it, because serveRequest sends the response itself."
+        },
+        {
+          "file": "app/server.mjs",
+          "line": 27,
+          "name": "closeServer",
+          "status": "current",
+          "explanation": "Stops accepting new connections, closes open ones, and exits the process with code 0 once the server has closed."
+        },
+        {
+          "file": "app/server.mjs",
+          "line": 29,
+          "name": "exitAfterClose",
+          "status": "current",
+          "explanation": "Exits the process with code 0 once the server has finished closing."
+        },
+        {
+          "file": "app/server.mjs",
+          "line": 34,
+          "name": "serveRequest",
+          "status": "current",
+          "explanation": "Routes one request and turns any error into a response. Known errors send their own status code, and anything else becomes a 500 that the server logs."
+        },
+        {
+          "file": "app/server.mjs",
+          "line": 51,
+          "name": "routeRequest",
+          "status": "current",
+          "explanation": "Matches the request method and path to the right handler: the page, the poll list, creating a poll, or voting. Unknown routes get a 404."
+        },
+        {
+          "file": "app/server.mjs",
+          "line": 70,
+          "name": "ensureVoter",
+          "status": "current",
+          "explanation": "Returns the voter id from the browser cookie. A browser without a valid cookie gets a new id, and the response sets the cookie."
+        },
+        {
+          "file": "app/server.mjs",
+          "line": 78,
+          "name": "readCookie",
+          "status": "current",
+          "explanation": "Finds one named value in a Cookie header and returns it, or null when the cookie is missing."
+        },
+        {
+          "file": "app/server.mjs",
+          "line": 87,
+          "name": "sendStatic",
+          "status": "current",
+          "explanation": "Sends one file from the public folder with its content type and a no-store cache header."
+        },
+        {
+          "file": "app/server.mjs",
+          "line": 93,
+          "name": "sendPolls",
+          "status": "current",
+          "explanation": "Reads the poll list from the data file and sends it to the browser in the public shape."
+        },
+        {
+          "file": "app/server.mjs",
+          "line": 98,
+          "name": "addPollRoute",
+          "status": "current",
+          "explanation": "Reads the new poll from the request body and saves it. It answers 201 with the poll, or 400 with the validation message when the input is not usable."
+        },
+        {
+          "file": "app/server.mjs",
+          "line": 109,
+          "name": "votePollRoute",
+          "status": "current",
+          "explanation": "Reads the chosen option from the request body and records the vote. It answers 200 with the updated poll, or the matching error status for an unknown poll, a bad option, or a repeat vote."
+        },
+        {
+          "file": "app/server.mjs",
+          "line": 119,
+          "name": "readJsonBody",
+          "status": "current",
+          "explanation": "Reads the request body, enforces a 10 KB size limit, and parses it as JSON. An empty body counts as an empty object. A body that is too large or not valid JSON becomes an error with a status code."
+        },
+        {
+          "file": "app/server.mjs",
+          "line": 136,
+          "name": "runExclusive",
+          "status": "current",
+          "explanation": "Runs one data task after the task before it finishes, so two writes never overlap. It returns the result of the task, or its error."
+        },
+        {
+          "file": "app/server.mjs",
+          "line": 139,
+          "name": "holdQueue",
+          "status": "current",
+          "explanation": "Stores the release function for the current task, so the next queued task waits until this one finishes."
+        },
+        {
+          "file": "app/server.mjs",
+          "line": 142,
+          "name": "runTask",
+          "status": "current",
+          "explanation": "Runs the queued data task once the task before it has finished."
+        },
+        {
+          "file": "app/server.mjs",
+          "line": 144,
+          "name": "releaseQueue",
+          "status": "current",
+          "explanation": "Releases the queue after the task finishes, whether it succeeded or failed, so the next queued task can start."
+        },
+        {
+          "file": "app/server.mjs",
+          "line": 149,
+          "name": "addPollTask",
+          "status": "current",
+          "explanation": "Loads the poll list, adds the new poll, saves the list, and returns the new poll. It runs inside the write queue."
+        },
+        {
+          "file": "app/server.mjs",
+          "line": 156,
+          "name": "castVoteTask",
+          "status": "current",
+          "explanation": "Loads the poll list, records the vote, and saves the list only when the vote counted. It returns the outcome and the updated poll."
+        },
+        {
+          "file": "app/server.mjs",
+          "line": 163,
+          "name": "sendJson",
+          "status": "current",
+          "explanation": "Sends a JSON response with the given status code and a correct content length."
+        },
+        {
+          "file": "app/server.mjs",
+          "line": 176,
+          "name": "startFromEnvironment",
+          "status": "current",
+          "explanation": "Reads PORT and DATA_FILE from the environment, starts the server, and stops it cleanly on SIGTERM or SIGINT."
+        },
+        {
+          "file": "app/server.mjs",
+          "line": 180,
+          "name": "stopOnSignal",
+          "status": "current",
+          "explanation": "Closes the server when the process gets SIGTERM or SIGINT, so the process exits cleanly with code 0."
+        },
+        {
+          "file": "app/server.mjs",
+          "line": 185,
+          "name": "announceListening",
+          "status": "current",
+          "explanation": "Prints the address the server listens on once the port is open."
+        },
+        {
+          "file": "app/store.mjs",
+          "line": 10,
+          "name": "loadPolls",
+          "status": "current",
+          "explanation": "Reads the poll list from the JSON data file. A missing file counts as an empty list, and a file that does not hold a list is an error."
+        },
+        {
+          "file": "app/store.mjs",
+          "line": 23,
+          "name": "savePolls",
+          "status": "current",
+          "explanation": "Writes the poll list to the data file. It writes a temporary file first and then renames it, so a crash cannot leave a half-written file."
+        },
+        {
+          "file": "app/store.mjs",
+          "line": 30,
+          "name": "createPoll",
+          "status": "current",
+          "explanation": "Checks the question and options, adds a new poll with zero votes to the list, and returns it. It throws a validation error when the input is not usable."
+        },
+        {
+          "file": "app/store.mjs",
+          "line": 42,
+          "name": "castVote",
+          "status": "current",
+          "explanation": "Records one vote for an option in a poll. It refuses an unknown poll, an option that does not exist, and a second vote from the same voter."
+        },
+        {
+          "file": "app/store.mjs",
+          "line": 54,
+          "name": "findPoll",
+          "status": "current",
+          "explanation": "Returns the poll with the given id from the list, or null when no poll has that id."
+        },
+        {
+          "file": "app/store.mjs",
+          "line": 61,
+          "name": "listPolls",
+          "status": "current",
+          "explanation": "Returns every poll in a form safe to send to the browser, without voter ids."
+        },
+        {
+          "file": "app/store.mjs",
+          "line": 65,
+          "name": "publicPoll",
+          "status": "current",
+          "explanation": "Copies one poll into the public shape: id, question, option tallies, total votes, and the creation time."
+        },
+        {
+          "file": "app/store.mjs",
+          "line": 75,
+          "name": "cleanText",
+          "status": "current",
+          "explanation": "Trims a text value and rejects it when it is missing, empty, not text, or longer than the limit."
+        },
+        {
+          "file": "app/store.mjs",
+          "line": 83,
+          "name": "cleanOptions",
+          "status": "current",
+          "explanation": "Checks that the options are a list of two to ten valid option labels, and returns them cleaned."
+        },
+        {
+          "file": "app/store.mjs",
+          "line": 91,
+          "name": "cleanOption",
+          "status": "current",
+          "explanation": "Cleans one option label using the option length limit."
+        },
+        {
+          "file": "app/store.mjs",
+          "line": 95,
+          "name": "startTally",
+          "status": "current",
+          "explanation": "Turns one option label into a tally with zero votes."
+        },
+        {
+          "file": "app/store.mjs",
+          "line": 99,
+          "name": "copyTally",
+          "status": "current",
+          "explanation": "Copies one option tally so that callers cannot change the stored poll."
+        },
+        {
+          "file": "app/store.mjs",
+          "line": 103,
+          "name": "addVotes",
+          "status": "current",
+          "explanation": "Adds the votes of one option to a running total. It counts all votes in a poll."
+        }
+      ]
+    }
+  ],
+  "drift": {
+    "ok": true,
+    "skipped": false,
+    "problems": []
+  }
+}

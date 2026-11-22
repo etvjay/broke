@@ -1,0 +1,16 @@
+{
+  "kind": "click",
+  "status": "passed",
+  "summary": "click: Clicking the Vote button next to Blue",
+  "duration_ms": 5465.7,
+  "url": "http://localhost:39985/",
+  "action_id": "12b3961a-e81c-4de8-b6f6-1dddce1a8488",
+  "element_rect": {
+    "x": 1212,
+    "y": 519,
+    "width": 35,
+    "height": 19
+  },
+  "ordinal": 9,
+  "id": "0-9"
+}

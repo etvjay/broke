@@ -1,0 +1,92 @@
+{
+  "run_id": "run",
+  "test_id": "test",
+  "objective": "Next, try a poll with only one option.\nIn the Question box, type: Only one?.\nIn the Options box, type Yes on one line.\nClick the Create poll button.\nCheck that the message \"options must have 2 to 10 entries\" appears under the form.\nCheck that no poll with the question \"Only one?\" appears in the list.",
+  "start_url": "about:blank",
+  "start_time": "2026-11-22T12:47:15.487440+00:00",
+  "config": {
+    "reasoning_provider": "testmuai",
+    "reasoning_model": "v16-alpha",
+    "vision_provider": "testmuai",
+    "vision_model": "v16-alpha",
+    "screen_width": 1920,
+    "screen_height": 1080,
+    "max_steps": 50
+  },
+  "credits_consumed": 16.844114999999995,
+  "steps": [
+    {
+      "step": 1,
+      "duration_ms": 6189.5,
+      "url": "http://localhost:33385/",
+      "status": "continue",
+      "step_file": "step_001.json",
+      "action_type": "type",
+      "action_target": "Typing the poll question into the form",
+      "success": true,
+      "method": "dom_action"
+    },
+    {
+      "step": 2,
+      "duration_ms": 4776.7,
+      "url": "http://localhost:33385/",
+      "status": "continue",
+      "step_file": "step_002.json",
+      "action_type": "type",
+      "action_target": "Typing Yes into the poll options field",
+      "success": true,
+      "method": "dom_action"
+    },
+    {
+      "step": 3,
+      "duration_ms": 4638.4,
+      "url": "http://localhost:33385/",
+      "status": "continue",
+      "step_file": "step_003.json",
+      "action_type": "click",
+      "action_target": "Clicking Create poll button",
+      "success": true,
+      "method": "dom_action"
+    },
+    {
+      "step": 4,
+      "duration_ms": 14236.6,
+      "url": "http://localhost:33385/",
+      "status": "continue",
+      "step_file": "step_004.json",
+      "action_type": "analyze",
+      "action_target": "ANALYZE(visual, 'no poll with the question \"Only one?\" appears in the list', key",
+      "success": true,
+      "method": "action"
+    },
+    {
+      "step": 5,
+      "duration_ms": 8.3,
+      "url": "http://localhost:33385/",
+      "status": "passed",
+      "step_file": "step_005.json",
+      "action_type": "assert",
+      "action_target": "the message \"options must have 2 to 10 entries\" appears under the form",
+      "success": true,
+      "method": "assertion"
+    },
+    {
+      "step": 6,
+      "duration_ms": 7.1,
+      "url": "http://localhost:33385/",
+      "status": "passed",
+      "step_file": "step_006.json",
+      "action_type": "assert",
+      "action_target": "no poll with the question \"Only one?\" appears in the list",
+      "success": true,
+      "method": "assertion"
+    }
+  ],
+  "errors": [],
+  "end_time": "2026-11-22T12:47:54.421393+00:00",
+  "total_duration_ms": 0,
+  "final_status": "complete",
+  "final_url": "http://localhost:33385/",
+  "total_steps": 6,
+  "reason": "Objective completed"
+}

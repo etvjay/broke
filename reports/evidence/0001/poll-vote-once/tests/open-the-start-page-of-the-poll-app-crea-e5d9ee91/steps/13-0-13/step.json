@@ -1,0 +1,16 @@
+{
+  "kind": "click",
+  "status": "passed",
+  "summary": "click: Clicking the Vote button next to Black",
+  "duration_ms": 5239.2,
+  "url": "http://localhost:37973/",
+  "action_id": "b7ecb589-3b70-46ce-822c-72c4ee4eedd5",
+  "element_rect": {
+    "x": 1212,
+    "y": 519,
+    "width": 35,
+    "height": 19
+  },
+  "ordinal": 13,
+  "id": "0-13"
+}

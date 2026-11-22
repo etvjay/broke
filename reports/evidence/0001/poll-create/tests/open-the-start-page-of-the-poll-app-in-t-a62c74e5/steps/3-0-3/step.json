@@ -1,0 +1,16 @@
+{
+  "kind": "type",
+  "status": "passed",
+  "summary": "type: Typing Lunch spot? into the question field",
+  "duration_ms": 6645.0,
+  "url": "http://localhost:33385/",
+  "action_id": "272dcc93-728b-4cdc-b5d7-35a115ed34db",
+  "element_rect": {
+    "x": 667,
+    "y": 137,
+    "width": 586,
+    "height": 19
+  },
+  "ordinal": 3,
+  "id": "0-3"
+}
