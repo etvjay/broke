@@ -87,10 +87,16 @@ export async function runPick({ root = ROOT, number, letter, reason, verifyScrip
       logFile: join(dir, "pick-verify.log")
     });
     const verified = verify.code === 0 ? "verified green" : verify.code === 1 ? "verified red" : "did not verify";
-    await writeFile(
-      join(dir, "pick.md"),
-      `${note}\nThe merged result ${verified} (exit ${verify.code}). ${verify.code === 0 ? "Main moves to this commit." : "Main did not move. The race keeps the lock."}\n`
-    );
+    const result =
+      verify.code === 0
+        ? `The merged result ${verified} (exit 0). Main moves to the merge.`
+        : `The merged result ${verified} (exit ${verify.code}). Main did not move, and the race keeps the lock.`;
+    // The record commit follows the report, so the report keeps the commit verify made.
+    const record = `${note}\n${result}\n`;
+    await writeFile(join(scratch, records, "pick.md"), record);
+    await git(scratch, ["add", "--", records]);
+    await git(scratch, ["commit", "-q", "-m", `race ${n}: record the pick result`, "-m", result, "-m", COAUTHOR]);
+    await writeFile(join(dir, "pick.md"), record);
     if (verify.code === 0) {
       await git(root, ["merge", "--ff-only", pickBranch]);
       const merged = (await git(root, ["rev-parse", "HEAD"])).trim();
