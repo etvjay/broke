@@ -26,7 +26,7 @@ Open http://localhost:3000. Set `PORT` to use another port. Run `npm install` fi
 
 Verify uses your Kane CLI login. Sign in with `kane-cli login --oauth`, which opens a browser. Or sign in with a username and access key: `kane-cli login --username <user> --access-key <key>`. Judges: the owner shares a judge login through the submission form. This repo holds no login, token, or key.
 
-Check your credits with `kane-cli balance`. Verify stops below 2,000 credits. In the five committed runs, one verify of all three flows cost 76 to 104 Kane credits, and each flow cost 23 to 38.
+Check your credits with `kane-cli balance`. Verify stops below 2,000 credits. In the eight committed runs, one verify of all three flows cost 72 to 104 Kane credits, and each flow cost 21 to 38.
 
 You do not need Kane to read the results. Every verify report is committed on main. Each race's records are committed on branch `race/NNNN-report`, and a pick copies them onto main.
 
@@ -46,7 +46,7 @@ npm run verify
 
 Verify runs the flows one at a time. For each flow it starts the app fresh, runs Kane, and records which app functions ran. Then it runs the drift check, writes `reports/NNNN.md` and `reports/NNNN.json`, copies each flow's redacted evidence into `reports/evidence/` when it can, and commits them. Each report names the commit it tested.
 
-The three flows took 4.7 to 5.5 minutes in the committed runs. Only one verify writes a report at a time. A second verify stops at once and names the lock file (`.git/why-it-broke-verify.lock` in a normal clone). If no verify is running, delete that file. A lock left by a process that has exited is cleared by itself.
+The three flows took 4.6 to 5.5 minutes in total in the committed runs. Only one verify writes a report at a time. A second verify stops at once and names the lock file (`.git/why-it-broke-verify.lock` in a normal clone). If no verify is running, delete that file. A lock left by a process that has exited is cleared by itself.
 
 Verify exits 0 when every flow passes and drift passes. It exits 1 when a flow or drift fails, and 2 when a flow errors or verify refuses to run.
 
@@ -70,8 +70,13 @@ The drift check fails when:
 | 0003 | d956c9e | Each browser sees its own vote | pass | 82.93 |
 | 0004 | f2df2c2 | A poll whose options repeat is refused | pass | 75.92 |
 | 0005 | 7cdb160 | The newest poll is listed first | pass | 100.71 |
+| 0006 | 7c51865 | Options that differ only in spacing are refused | pass | 101.24 |
+| 0007 | 048d6cc | A poll list that cannot load shows a notice | pass | 75.83 |
+| 0008 | eced74a | Each poll shows its total votes | pass | 72.40 |
 
-Reports 0003 to 0005 each test an app change that the builder agent made. None was planted to fail. No run has gone red, so the race has not run on a real red, and no pick has run. The race is tested with fake racers and a fake verify. One Droid racer has run once, on a one-line test change, through the same process code. The 20-minute limit and a racer's cost on a real fix are untested.
+Reports 0003 to 0008 each test an app change that the builder agent made, with a failing test or browser check written first. None was planted to fail. Reports 0006 to 0008 were the last three tries the owner allowed, and all three passed. No run has gone red, so the race has not run on a real red, and no pick has run. The race is tested with fake racers and a fake verify. One Droid racer has run once, on a one-line test change, through the same process code. The 20-minute limit and a racer's cost on a real fix are untested.
+
+The Kane balance fell by 776 credits from report 0001 to report 0008. The committed reports, and one stray run that was never committed (about 81 credits by its visible records), account for about 693 of that. The other 83 credits have no known cause.
 
 ## The Stop hook and the race
 
