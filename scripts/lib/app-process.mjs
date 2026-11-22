@@ -40,18 +40,31 @@ export function startApp({ serverFile, cwd, port, dataFile, coverageDir }) {
 
 export async function waitForApp(app, timeoutMs) {
   const deadline = Date.now() + timeoutMs;
+  let answered = false;
   while (!app.exited && Date.now() < deadline) {
     try {
       const response = await fetch(`http://127.0.0.1:${app.port}/api/polls`, { signal: AbortSignal.timeout(500) });
-      await response.arrayBuffer();
-      if (response.ok) return { ok: true, detail: "" };
+      const body = await response.text();
+      answered = true;
+      if (response.ok && isPollList(body)) return { ok: true, detail: "" };
     } catch {
       // Not listening yet. Retry until the deadline or until the app exits.
     }
     await new Promise((resolve) => setTimeout(resolve, 100));
   }
   if (app.exited) return { ok: false, detail: `${describeExit(app.exit)}${errorLine(app.stderr)}` };
+  if (answered) return { ok: false, detail: "the port answered, but /api/polls did not return a poll list" };
   return { ok: false, detail: `no response within ${timeoutMs / 1000} s` };
+}
+
+// The poll app answers GET /api/polls with { polls: [...] }. Any other server
+// on the port fails this check, so verify does not run Kane against it.
+function isPollList(body) {
+  try {
+    return Array.isArray(JSON.parse(body).polls);
+  } catch {
+    return false;
+  }
 }
 
 export function stopApp(app, timeoutMs) {
