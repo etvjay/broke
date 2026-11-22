@@ -63,7 +63,9 @@ export async function runVerify({
     head,
     flows,
     drift,
-    driftNote: complete ? null : "The ran-in-no-flow check was skipped because a flow errored."
+    driftNote: complete ? null : "The ran-in-no-flow check was skipped because a flow errored.",
+    functions,
+    explanations
   });
   await commitReport({ root, number, head, markdown });
   log(`drift: ${drift.ok ? "passed" : `failed, ${drift.problems.length} problem(s)`}`);
