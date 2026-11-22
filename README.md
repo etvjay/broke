@@ -26,7 +26,7 @@ Open http://localhost:3000. Set `PORT` to use another port. Run `npm install` fi
 
 Verify uses your Kane CLI login. Sign in with `kane-cli login --oauth`, which opens a browser. Or sign in with a username and access key: `kane-cli login --username <user> --access-key <key>`. Judges: the owner shares a judge login through the submission form. This repo holds no login, token, or key.
 
-Check your credits with `kane-cli balance`. Verify stops below 2,000 credits. All three flows cost about 33 to 63 credits per verify.
+Check your credits with `kane-cli balance`. Verify stops below 2,000 credits. In the five committed runs, one verify of all three flows cost 76 to 104 Kane credits, and each flow cost 23 to 38.
 
 You do not need Kane to read the results. Every verify report is committed on main. Each race's records are committed on branch `race/NNNN-report`, and a pick copies them onto main.
 
@@ -46,6 +46,8 @@ npm run verify
 
 Verify runs the flows one at a time. For each flow it starts the app fresh, runs Kane, and records which app functions ran. Then it runs the drift check, writes `reports/NNNN.md` and `reports/NNNN.json`, copies each flow's redacted evidence into `reports/evidence/` when it can, and commits them. Each report names the commit it tested.
 
+The three flows took 4.7 to 5.5 minutes in the committed runs. Only one verify writes a report at a time. A second verify stops at once and names the lock file (`.git/why-it-broke-verify.lock` in a normal clone). If no verify is running, delete that file. A lock left by a process that has exited is cleared by itself.
+
 Verify exits 0 when every flow passes and drift passes. It exits 1 when a flow or drift fails, and 2 when a flow errors or verify refuses to run.
 
 The drift check fails when:
@@ -57,21 +59,31 @@ The drift check fails when:
 
 `npm run drift` runs the checks that need no Kane run. Verify adds the last one. The drift check tests the process, not the truth. It confirms that each explanation was written for the code as it is now. It does not confirm that the explanation is correct.
 
-## Sample red run
+## Runs so far
 
-[reports/](reports/) holds the committed runs. A red report gives Kane's verdict on the failing flow, the functions on its failing path with their explanations, and the drift table.
+[reports/](reports/) holds every committed run. A red run's report gives Kane's verdict on the failing flow, the functions on its failing path with their explanations, and the drift table.
+
+| Report | Tested commit | What the run tested | Result | Kane credits |
+| --- | --- | --- | --- | --- |
+| 0001 | 6e196ba | The baseline app and the owner-approved flows | pass | 96.64 |
+| 0002 | 910cc99 | The same app and flows, with the redaction rules fixed | pass | 103.79 |
+| 0003 | d956c9e | Each browser sees its own vote | pass | 82.93 |
+| 0004 | f2df2c2 | A poll whose options repeat is refused | pass | 75.92 |
+| 0005 | 7cdb160 | The newest poll is listed first | pass | 100.71 |
+
+Reports 0003 to 0005 each test an app change that the builder agent made. None was planted to fail. No run has gone red, so the race has not run on a real red, and no pick has run. The race is tested with fake racers and a fake verify. No real racer has run, so the 20-minute limit and a racer's cost are untested.
 
 ## The Stop hook and the race
 
 After an agent turn that changes `app/` or `explain/`, the Stop hook (`.factory/hooks.json`) runs verify. A green run ends the turn. A red run that a race can fix starts a race in the background. A race can fix an app fault that Kane's verdict places in the app, or a drift problem that the code or an explanation can fix. Other reds stop for the owner: a function that no flow ran, a fault Kane places in the flow itself, and Kane errors such as a crash, a timeout, a login problem, or low credits.
 
-1. The runner creates the worktrees `race/NNNN-a`, `race/NNNN-b`, and `race/NNNN-c` from the red commit. It starts one Droid racer in each, all at once. Each racer gets the failing report and Kane's verdict, and has 20 minutes.
+1. The runner creates the worktrees `race/NNNN-a`, `race/NNNN-b`, and `race/NNNN-c` from the red commit. It runs one Droid racer at a time, a, then b, then c. Each racer gets the failing report and Kane's verdict, and has 20 minutes.
 2. Each racer changes only `app/` and `explain/`, and commits its fix.
-3. The runner verifies each attempt in turn, with the same flows and drift check.
+3. As soon as a racer exits, the runner verifies its attempt with the same flows and drift check. The next racer starts after that verify ends.
 4. The runner writes `comparison.md`. It lists each attempt's verdicts, drift result, and changed lines. It names no winner.
 5. The owner picks a green attempt: `npm run race:pick -- NNNN a --reason "<why>"`. The runner merges it and verifies the merged code. If that verify is green, main gets the merge, Kane's report on it, and a pick record with the verdict. Otherwise main stays where it was, and the merge, its report, and the record stay on branch `pick/NNNN-<letter>`.
 
-If no attempt is green, nothing merges. The records go to branch `race/NNNN-report`, and the race lock clears so the owner can decide the next step. A green race puts its records on the same branch while it waits for the pick. A race costs about three verifies' worth of Kane credits.
+If no attempt is green, nothing merges. The records go to branch `race/NNNN-report`, and the race lock clears so the owner can decide the next step. A green race puts its records on the same branch while it waits for the pick. A race runs three attempt verifies, about 230 to 310 Kane credits in total. The owner's pick runs one more verify, about 76 to 104.
 
 If a race stops before it finishes, for example when the machine restarts, its lock goes stale. The next red clears the lock and starts a new race. To close a stopped race by hand, run `npm run race:close -- NNNN`.
 
