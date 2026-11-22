@@ -24,7 +24,14 @@ function renderPoll(poll) {
     button.type = "button";
     button.textContent = "Vote";
     button.addEventListener("click", () => castVote(poll.id, index));
-    row.append(label, button);
+    row.append(label);
+    if (index === poll.yourVote) {
+      const mark = document.createElement("span");
+      mark.className = "your-vote";
+      mark.textContent = "Your vote";
+      row.append(mark);
+    }
+    row.append(button);
     card.append(row);
   });
   const message = document.createElement("p");

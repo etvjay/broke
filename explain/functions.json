@@ -20,8 +20,8 @@
   {
     "file": "app/server.mjs",
     "name": "castVoteTask",
-    "explanation": "Loads the poll list, records the vote, and saves the list only when the vote counted. It returns the outcome and the updated poll.",
-    "hash": "acfa08e3da0741ab78a9b63f0ab263913533a2c5ff3867d01ee5ba6a5c25b0f2"
+    "explanation": "Loads the poll list, records the vote, and saves the list only when the vote counted. It returns the outcome and the updated poll as the voter sees it.",
+    "hash": "4bfc7d0ed8b0c16ca5c6e51d510ed371acee7444a8027705a06d425798d980c8"
   },
   {
     "file": "app/server.mjs",
@@ -80,8 +80,8 @@
   {
     "file": "app/server.mjs",
     "name": "routeRequest",
-    "explanation": "Matches the request method and path to the right handler: the page, the poll list, creating a poll, or voting. Unknown routes get a 404.",
-    "hash": "c8f3c85adcb88dfd1bd17b1492f0b7488ccdbdfc9338b4ac96a1661d972cf753"
+    "explanation": "Matches the request method and path to the right handler: the page, the poll list, creating a poll, or voting. The poll list and the vote route receive the browser voter id from its cookie. Unknown routes get a 404.",
+    "hash": "eb7d944b22cf061781f661d1020bbba6dc8bf0f10ab97c533319ea52561921ce"
   },
   {
     "file": "app/server.mjs",
@@ -104,8 +104,8 @@
   {
     "file": "app/server.mjs",
     "name": "sendPolls",
-    "explanation": "Reads the poll list from the data file and sends it to the browser in the public shape.",
-    "hash": "29617ba1dbc5365f4f5d5ef24eb383a020a9519085c2ddff4d3da15278a741b3"
+    "explanation": "Reads the poll list from the data file and sends it to the browser in the public shape. Only the browser that asks sees its own choice, marked as yourVote.",
+    "hash": "323e337d562fa5ac209cf5e05e8343b0d44b01133e8d31749280fbb9d04f7471"
   },
   {
     "file": "app/server.mjs",
@@ -145,9 +145,15 @@
   },
   {
     "file": "app/store.mjs",
+    "name": "ballotOf",
+    "explanation": "Returns the option index that one voter chose in a poll. It returns null when the voter has not voted, and also for an old voter whose choice was never recorded.",
+    "hash": "4fa07647ef7f3165f47036b12d8dd04f726bfe21af3eebfac4661b9b6aa1bbca"
+  },
+  {
+    "file": "app/store.mjs",
     "name": "castVote",
-    "explanation": "Records one vote for an option in a poll. It refuses an unknown poll, an option that does not exist, and a second vote from the same voter.",
-    "hash": "ccc0fd37c2f5a4178a081707333a24a5e083f5f0062635e8422698f759a719f4"
+    "explanation": "Records one vote for an option in a poll. It refuses an unknown poll, an option that does not exist, and a second vote from the same voter. A counted vote goes into the ballot map, so the voter can see their own choice later.",
+    "hash": "57f6d0c5e66ba938273091cbfed95ef1e5039d7ad229f5a86521e3649ca2fa74"
   },
   {
     "file": "app/store.mjs",
@@ -176,8 +182,8 @@
   {
     "file": "app/store.mjs",
     "name": "createPoll",
-    "explanation": "Checks the question and options, adds a new poll with zero votes to the list, and returns it. It throws a validation error when the input is not usable.",
-    "hash": "caa99d42600bb053a35d345892b7801328b4c2e8353bd6a279775f673d85e550"
+    "explanation": "Checks the question and options, adds a new poll with zero votes and an empty ballot map to the list, and returns it. It throws a validation error when the input is not usable.",
+    "hash": "88806b7d7a0549df9155037d23ce82794dbd7f8fbe15158f3dc1fa6a68530d84"
   },
   {
     "file": "app/store.mjs",
@@ -194,20 +200,20 @@
   {
     "file": "app/store.mjs",
     "name": "listPolls",
-    "explanation": "Returns every poll in a form safe to send to the browser, without voter ids.",
-    "hash": "02fd8890cd9d5c849d4978e7f3bd3e7da14f65106d615e7f4c9664f35cf8baef"
+    "explanation": "Returns every poll in a form safe to send to the browser, without voter ids. Each poll says which option the given voter chose, or null when that voter has not chosen one or no voter is given.",
+    "hash": "a58b1b6c56c316e499dcd3306f77c0bc67a9eb9e8209d3eb7f7312d411d3729d"
   },
   {
     "file": "app/store.mjs",
     "name": "loadPolls",
-    "explanation": "Reads the poll list from the JSON data file. A missing file counts as an empty list, and a file that does not hold a list is an error.",
-    "hash": "2e91411783f35e4b2bd26b96ac3212817d57c1651412d0cbd1cc5947b44a6fe0"
+    "explanation": "Reads the poll list from the JSON data file. A missing file counts as an empty list, and a file that does not hold a list is an error. Each poll is brought up to the current ballot format on the way in.",
+    "hash": "0193583a2ecdb1810432fac4c99fb52bd60a4a1980b838eceb4048c838eade6f"
   },
   {
     "file": "app/store.mjs",
     "name": "publicPoll",
-    "explanation": "Copies one poll into the public shape: id, question, option tallies, total votes, and the creation time.",
-    "hash": "a5303784f8e8bc27dd895c356c4c6877f28333420e76c64ac1aa79dad9d5d6cf"
+    "explanation": "Copies one poll into the public shape: id, question, option tallies, total votes, the choice of the given voter, and the creation time. The choice is null when no voter is given.",
+    "hash": "fd0d646eebab4f0f3d1a4d4ebe034d6342eca56d0b7439cbb2fbd2c3a25679d7"
   },
   {
     "file": "app/store.mjs",
@@ -220,5 +226,17 @@
     "name": "startTally",
     "explanation": "Turns one option label into a tally with zero votes.",
     "hash": "c9034491df2b0aed0f84dab0c6f2e30b28a4e26cb6e5745263a835d1743673ac"
+  },
+  {
+    "file": "app/store.mjs",
+    "name": "upgradeBallots",
+    "explanation": "Gives a poll saved with the old voter list a ballot map. Each old voter gets an entry with a null choice, because the old format did not record which option they picked. A poll that already has a ballot map is returned unchanged.",
+    "hash": "19a40d638d36ae5f783cfba4d0d1639ed8cde428914a7e69c8fb90783e2ee2df"
+  },
+  {
+    "file": "app/store.mjs",
+    "name": "viewFor",
+    "explanation": "Shapes one poll for the voter who asked for the list. listPolls applies it to every poll in the list.",
+    "hash": "1f5e5a29fa9ada2da8065a8d7400c08ca51b45db97de45e999d551e7213b7113"
   }
 ]

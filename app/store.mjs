@@ -17,7 +17,7 @@ export async function loadPolls(file) {
   }
   const polls = JSON.parse(text);
   if (!Array.isArray(polls)) throw new Error(`${file} does not hold a list of polls`);
-  return polls;
+  return polls.map(upgradeBallots);
 }
 
 export async function savePolls(file, polls) {
@@ -32,7 +32,7 @@ export function createPoll(polls, input) {
     id: randomUUID(),
     question: cleanText(input?.question, "question", QUESTION_MAX),
     options: cleanOptions(input?.options).map(startTally),
-    voters: [],
+    ballots: {},
     createdAt: new Date().toISOString()
   };
   polls.push(poll);
@@ -45,9 +45,9 @@ export function castVote(polls, pollId, optionIndex, voterId) {
   if (!Number.isInteger(optionIndex) || optionIndex < 0 || optionIndex >= poll.options.length) {
     return { ok: false, reason: "bad_option" };
   }
-  if (poll.voters.includes(voterId)) return { ok: false, reason: "already_voted" };
+  if (Object.hasOwn(poll.ballots, voterId)) return { ok: false, reason: "already_voted" };
   poll.options[optionIndex].votes += 1;
-  poll.voters.push(voterId);
+  poll.ballots[voterId] = optionIndex;
   return { ok: true };
 }
 
@@ -58,16 +58,19 @@ export function findPoll(polls, pollId) {
   return null;
 }
 
-export function listPolls(polls) {
-  return polls.map(publicPoll);
+export function listPolls(polls, voterId) {
+  return polls.map(function viewFor(poll) {
+    return publicPoll(poll, voterId);
+  });
 }
 
-export function publicPoll(poll) {
+export function publicPoll(poll, voterId) {
   return {
     id: poll.id,
     question: poll.question,
     options: poll.options.map(copyTally),
     totalVotes: poll.options.reduce(addVotes, 0),
+    yourVote: ballotOf(poll, voterId),
     createdAt: poll.createdAt
   };
 }
@@ -102,6 +105,18 @@ function copyTally(tally) {
 
 function addVotes(total, tally) {
   return total + tally.votes;
+}
+
+function upgradeBallots(poll) {
+  if (poll.ballots) return poll;
+  const { voters = [], ...rest } = poll;
+  const ballots = {};
+  for (const voterId of voters) ballots[voterId] = null;
+  return { ...rest, ballots };
+}
+
+function ballotOf(poll, voterId) {
+  return Object.hasOwn(poll.ballots, voterId) ? poll.ballots[voterId] : null;
 }
 
 function invalid(message) {

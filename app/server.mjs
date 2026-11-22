@@ -55,7 +55,7 @@ async function routeRequest(context, req, res) {
     return sendStatic(res, STATIC_FILES.get(url.pathname));
   }
   if (url.pathname === "/api/polls" && req.method === "GET") {
-    return sendPolls(context, res);
+    return sendPolls(context, res, voterId);
   }
   if (url.pathname === "/api/polls" && req.method === "POST") {
     return addPollRoute(context, req, res);
@@ -90,9 +90,9 @@ async function sendStatic(res, entry) {
   res.end(body);
 }
 
-async function sendPolls(context, res) {
+async function sendPolls(context, res, voterId) {
   const polls = await loadPolls(context.dataFile);
-  sendJson(res, 200, { polls: listPolls(polls) });
+  sendJson(res, 200, { polls: listPolls(polls, voterId) });
 }
 
 async function addPollRoute(context, req, res) {
@@ -157,7 +157,7 @@ async function castVoteTask(dataFile, input) {
   const polls = await loadPolls(dataFile);
   const result = castVote(polls, input.pollId, input.option, input.voterId);
   if (result.ok) await savePolls(dataFile, polls);
-  return { result, poll: result.ok ? publicPoll(findPoll(polls, input.pollId)) : null };
+  return { result, poll: result.ok ? publicPoll(findPoll(polls, input.pollId), input.voterId) : null };
 }
 
 function sendJson(res, status, payload) {

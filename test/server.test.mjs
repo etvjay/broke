@@ -76,6 +76,28 @@ test("one vote per browser: a repeat vote from the same cookie gets 409, another
   assert.equal(other.status, 200);
 });
 
+test("GET /api/polls tells each browser which option it chose, and others nothing", async () => {
+  const created = await fetch(`${base}/api/polls`, {
+    method: "POST",
+    headers: JSON_HEADERS,
+    body: JSON.stringify({ question: "Favourite colour?", options: ["Red", "Blue"] })
+  });
+  const { poll } = await created.json();
+  const cookieA = await newVoterCookie();
+  const cookieB = await newVoterCookie();
+  const cast = await fetch(`${base}/api/polls/${poll.id}/vote`, {
+    method: "POST",
+    headers: { ...JSON_HEADERS, cookie: cookieA },
+    body: JSON.stringify({ option: 1 })
+  });
+  assert.equal(cast.status, 200);
+  assert.equal((await cast.json()).poll.yourVote, 1);
+  const listedA = await (await fetch(`${base}/api/polls`, { headers: { cookie: cookieA } })).json();
+  assert.equal(listedA.polls.find((listed) => listed.id === poll.id).yourVote, 1);
+  const listedB = await (await fetch(`${base}/api/polls`, { headers: { cookie: cookieB } })).json();
+  assert.equal(listedB.polls.find((listed) => listed.id === poll.id).yourVote, null);
+});
+
 test("bad input gets clear errors", async () => {
   const solo = await fetch(`${base}/api/polls`, { method: "POST", headers: JSON_HEADERS, body: JSON.stringify({ question: "Solo?", options: ["Only"] }) });
   assert.equal(solo.status, 400);
