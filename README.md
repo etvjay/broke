@@ -78,6 +78,8 @@ Reports 0003 to 0008 each test an app change that the builder agent made, with a
 
 The Kane balance fell by 776 credits between the balance recorded after report 0001 and the one after report 0008. Reports 0002 to 0008, and one stray run that was never committed (about 81 credits by its visible records), account for about 693 of that. The other 83 credits have no known cause.
 
+Git history keeps some data from the first run. Commit `b560bb5`, which commits report 0001, contains three LambdaTest share links, the account name, and the organization and user IDs. Commits `091d665` and `910cc99` removed them from the tracked files, but the history was kept, so each report's tested commit still exists. Kane share links expire seven days after they are made, so the three report 0001 links should expire around 29 November 2026.
+
 ## The Stop hook and the race
 
 After an agent turn that changes `app/` or `explain/`, the Stop hook (`.factory/hooks.json`) runs verify. A green run ends the turn. A red run that a race can fix starts a race in the background. A race can fix an app fault that Kane's verdict places in the app, or a drift problem that the code or an explanation can fix. Other reds stop for the owner: a function that no flow ran, a fault Kane places in the flow itself, and Kane errors such as a crash, a timeout, a login problem, or low credits.
