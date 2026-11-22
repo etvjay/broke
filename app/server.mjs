@@ -20,18 +20,7 @@ const STATIC_FILES = new Map([
 export function createServer({ dataFile }) {
   const context = { dataFile, queue: Promise.resolve() };
   return createHttpServer(function handleRequest(req, res) {
-    routeRequest(context, req, res).catch(function failRequest(error) {
-      if (error.status) {
-        sendJson(res, error.status, { error: error.code });
-        return;
-      }
-      console.error(error);
-      if (res.headersSent) {
-        res.end();
-      } else {
-        sendJson(res, 500, { error: "server_error" });
-      }
-    });
+    serveRequest(context, req, res);
   });
 }
 
@@ -40,9 +29,23 @@ export function closeServer(server) {
   server.close(function exitAfterClose() {
     process.exit(0);
   });
-  setTimeout(function forceExit() {
-    process.exit(0);
-  }, 2000).unref();
+}
+
+async function serveRequest(context, req, res) {
+  try {
+    await routeRequest(context, req, res);
+  } catch (error) {
+    if (error.status) {
+      sendJson(res, error.status, { error: error.code });
+      return;
+    }
+    console.error(error);
+    if (res.headersSent) {
+      res.end();
+    } else {
+      sendJson(res, 500, { error: "server_error" });
+    }
+  }
 }
 
 async function routeRequest(context, req, res) {
@@ -118,7 +121,7 @@ async function readJsonBody(req) {
   let size = 0;
   for await (const chunk of req) {
     size += chunk.length;
-    if (size > BODY_LIMIT) throw httpError(413, "body_too_large");
+    if (size > BODY_LIMIT) throw Object.assign(new Error("body_too_large"), { status: 413, code: "body_too_large" });
     chunks.push(chunk);
   }
   const text = Buffer.concat(chunks).toString("utf8");
@@ -126,19 +129,22 @@ async function readJsonBody(req) {
   try {
     return JSON.parse(text);
   } catch {
-    throw httpError(400, "bad_json");
+    throw Object.assign(new Error("bad_json"), { status: 400, code: "bad_json" });
   }
 }
 
 function runExclusive(context, task, input) {
-  const run = context.queue.then(function runTask() {
-    return task(context.dataFile, input);
+  const previous = context.queue;
+  let release;
+  context.queue = new Promise(function holdQueue(resolve) {
+    release = resolve;
   });
-  context.queue = run.catch(ignoreFailure);
-  return run;
+  return previous.then(function runTask() {
+    return task(context.dataFile, input);
+  }).finally(function releaseQueue() {
+    release();
+  });
 }
-
-function ignoreFailure() {}
 
 async function addPollTask(dataFile, input) {
   const polls = await loadPolls(dataFile);
@@ -163,10 +169,6 @@ function sendJson(res, status, payload) {
   res.end(body);
 }
 
-function httpError(status, code) {
-  return Object.assign(new Error(code), { status, code });
-}
-
 if (process.argv[1] && pathToFileURL(process.argv[1]).href === import.meta.url) {
   startFromEnvironment();
 }
@@ -175,12 +177,11 @@ function startFromEnvironment() {
   const port = Number(process.env.PORT || 3000);
   const dataFile = process.env.DATA_FILE || "data/polls.json";
   const server = createServer({ dataFile });
-  process.on("SIGTERM", function stopOnSigterm() {
+  function stopOnSignal() {
     closeServer(server);
-  });
-  process.on("SIGINT", function stopOnSigint() {
-    closeServer(server);
-  });
+  }
+  process.on("SIGTERM", stopOnSignal);
+  process.on("SIGINT", stopOnSignal);
   server.listen(port, function announceListening() {
     console.log(`listening on http://localhost:${server.address().port}`);
   });
