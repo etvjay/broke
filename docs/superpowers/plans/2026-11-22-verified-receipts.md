@@ -50,7 +50,7 @@
 
 ### Task 1: Localhost check (no repo code)
 
-**Files:** none in the repo. Scratch page: `/home/ubuntu/kane-research/localhost-check/index.html`.
+**Files:** none in the repo. Scratch page: `~/kane-research/localhost-check/index.html`.
 
 - [ ] Write a one-line page with the heading `Localhost check`.
 - [ ] Serve it on port 8765 with `python3 -m http.server 8765`, started in the background from that folder.
@@ -62,7 +62,7 @@
 
 **Precondition:** the user has set `git config user.name` and `user.email`. If either is unset, stop and report.
 
-- [ ] In `/home/ubuntu/kane`, run `git init -b main`, add `.gitignore`, the design doc, and the plan, and commit `docs: add verified receipts design and plan`.
+- [ ] In `~/kane`, run `git init -b main`, add `.gitignore`, the design doc, and the plan, and commit `docs: add verified receipts design and plan`.
 - [ ] Run `gh repo create etvjay/verified-receipts --public --source=. --remote=origin`, then `git push -u origin main`. If git asks for credentials, stop and ask before changing any git credential setting.
 - [ ] Expected: `gh repo view etvjay/verified-receipts --json visibility` prints `"PUBLIC"`.
 

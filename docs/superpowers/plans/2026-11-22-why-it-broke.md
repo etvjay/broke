@@ -71,7 +71,7 @@ Expected: both print values. If either is empty, stop and ask the owner to set t
 
 - [ ] **Step 2: Initialize the repo**
 
-Run: `cd /home/ubuntu/kane && git init -b main`
+Run: `cd ~/kane && git init -b main`
 Expected: `Initialized empty Git repository`.
 
 - [ ] **Step 3: Write `.gitignore`**
@@ -93,10 +93,10 @@ Expected: one commit on `main`.
 
 ### Task 1: Build step 1 checks (outside the repo)
 
-Findings go to `/home/ubuntu/kane-research/build-step-1/FINDINGS.md`. Nothing under `/home/ubuntu/kane/app` is committed yet. Probe servers and flows live in `/home/ubuntu/kane-research/build-step-1/`. Budget about 15 credits.
+Findings go to `~/kane-research/build-step-1/FINDINGS.md`. Nothing under `~/kane/app` is committed yet. Probe servers and flows live in `~/kane-research/build-step-1/`. Budget about 15 credits.
 
 **Files:**
-- Create (outside repo): `/home/ubuntu/kane-research/build-step-1/probe-server.mjs`, `probe-flow-pass.md`, `probe-flow-fail.md`, `FINDINGS.md`
+- Create (outside repo): `~/kane-research/build-step-1/probe-server.mjs`, `probe-flow-pass.md`, `probe-flow-fail.md`, `FINDINGS.md`
 
 **Interfaces:**
 - Consumes: none
@@ -108,7 +108,7 @@ Findings go to `/home/ubuntu/kane-research/build-step-1/FINDINGS.md`. Nothing un
 - [ ] **Step 2: Coverage on clean exit.** Run `NODE_V8_COVERAGE=/tmp/cov-probe node probe-server.mjs`, send one request, then `kill -TERM <pid>`. Confirm a `coverage-*.json` file appears and lists the handler functions with `count > 0`.
   Gate: no file, or no counts, means stop and redesign the trace before Task 5.
 
-- [ ] **Step 3: Kane output fields.** Run the pass flow and the fail flow (the fail flow expects text the page does not show; this is a probe, not a planted bug in the product). Save NDJSON to `/home/ubuntu/kane-research/build-step-1/`. Record:
+- [ ] **Step 3: Kane output fields.** Run the pass flow and the fail flow (the fail flow expects text the page does not show; this is a probe, not a planted bug in the product). Save NDJSON to `~/kane-research/build-step-1/`. Record:
   - exit codes (pass 0, fail 1 expected)
   - the `run_end` event fields and the `verdict` object fields (`family`, `category`, `root_cause`, `suggestion`, `culprit_step`, `confidence`, `agent_fault_assessment`)
   - the `coverage` event `pack` path
@@ -286,7 +286,7 @@ Findings go to `/home/ubuntu/kane-research/build-step-1/FINDINGS.md`. Nothing un
 **Interfaces:**
 - Consumes: hook stdin JSON (Task 1 format: `session_id`, `transcript_path`, `cwd`, `permission_mode`, `hook_event_name`, `message_id`), `git status`, `reports/` latest tested SHA, `lock.mjs`. `stop_hook_active` comes from an earlier doc read, so confirm it in Step 1 before the loop guard relies on it.
 - Produces: exit `2` with a message asking for a commit (uncommitted changes under `app/` or `explain/`); exit `0` with a message when `stop_hook_active` is true; exit `0` after running verify on a new commit; on red that qualifies for a race, starts `race.mjs` detached and exits `0` with the message to the owner; other reds exit `0` with the reason.
-- `.factory/hooks.json`: Stop hook, command `node /home/ubuntu/kane/scripts/stop-hook.mjs`, timeout above the longest verify run (default is 60 s).
+- `.factory/hooks.json`: Stop hook, command `node ~/kane/scripts/stop-hook.mjs`, timeout above the longest verify run (default is 60 s).
 
 - [ ] **Step 1: Write failing tests** for each branch by piping JSON to the script.
 - [ ] **Step 2: Run** the test. Expected: FAIL.

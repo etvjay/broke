@@ -60,7 +60,7 @@ The judges score three bars first: the app works end to end, Kane caught or prov
 - Credits: 10,200 before the smoke tests and 10,179.94 after them, about 20 credits for two runs (one cost 13.06). Three flows per verify is estimated at 60 credits.
 - Git author name and email are not set on this machine. The user sets them before the first commit.
 - Committed evidence is redacted before commit: no email address, local home path, IP address, or auth value reaches the public repo.
-- On this VPS: Node 24, npm 11, Chromium, and Kane CLI 0.10.4, logged in as profile jay.
+- On this VPS: Node 24, npm 11, Chromium, and Kane CLI 0.10.4, logged in as the owner's profile.
 
 ## Approaches considered
 
