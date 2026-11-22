@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Poll app</title>
+    <style>
+      body { font-family: system-ui, sans-serif; max-width: 640px; margin: 2rem auto; padding: 0 1rem; color: #1b1b1b; }
+      form, .poll { border: 1px solid #ddd; border-radius: 8px; padding: 1rem; margin-bottom: 1rem; }
+      label { display: block; margin-bottom: 0.75rem; }
+      input, textarea { width: 100%; box-sizing: border-box; padding: 0.5rem; font: inherit; }
+      button { padding: 0.4rem 0.8rem; font: inherit; cursor: pointer; }
+      .option { display: flex; justify-content: space-between; align-items: center; margin: 0.4rem 0; }
+      .status { min-height: 1.2rem; color: #555; font-size: 0.9rem; margin: 0.5rem 0 0; }
+      .error { color: #a00; }
+    </style>
+  </head>
+  <body>
+    <h1>Poll app</h1>
+    <form id="create-form">
+      <label>Question <input id="question" name="question" maxlength="200" required></label>
+      <label>Options, one per line <textarea id="options" name="options" rows="3" required></textarea></label>
+      <button type="submit">Create poll</button>
+      <p id="create-status" class="status" role="status"></p>
+    </form>
+    <section id="polls" aria-live="polite"></section>
+    <script src="/app.js"></script>
+  </body>
+</html>
