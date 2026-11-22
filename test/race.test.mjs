@@ -1,6 +1,6 @@
 import { after, test } from "node:test";
 import assert from "node:assert/strict";
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { chmod, copyFile, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -336,4 +336,25 @@ test("explanationChanges counts changed, added, and removed entries", () => {
   ];
   assert.equal(explanationChanges(before, after), 2);
   assert.equal(explanationChanges(after, before), 2);
+});
+
+test("the race CLI runs on the repo named by --root", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "wib-race-cli-"));
+  temps.push(dir);
+  const home = join(dir, "home");
+  await mkdir(home);
+  const repo = join(dir, "kane");
+  await mkdir(join(repo, "reports"), { recursive: true });
+  git(repo, ["init", "-q", "-b", "main"]);
+  git(repo, ["config", "user.name", git(ROOT, ["config", "--get", "user.name"]).trim()]);
+  git(repo, ["config", "user.email", git(ROOT, ["config", "--get", "user.email"]).trim()]);
+  await writeFile(join(repo, "reports", "0007.md"), "# report 0007\n");
+  git(repo, ["add", "-A"]);
+  git(repo, ["commit", "-q", "-m", "report: 0007"]);
+  const r = spawnSync(process.execPath, [join(ROOT, "scripts", "race.mjs"), "--root", repo], {
+    env: { ...process.env, HOME: home },
+    encoding: "utf8"
+  });
+  assert.equal(r.status, 2, r.stderr);
+  assert.match(r.stdout, /report 0007 has no summary file/);
 });

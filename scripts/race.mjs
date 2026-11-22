@@ -1,7 +1,8 @@
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
+import { parseArgs } from "node:util";
 import { DROID_BIN, RACER_TIMEOUT_MS, ROOT, VERIFY_SCRIPT } from "./config.mjs";
 import { buildBrief } from "./lib/brief.mjs";
 import { explanationChanges, failuresOf, renderComparison } from "./lib/compare.mjs";
@@ -274,7 +275,8 @@ async function parentOf(root, rev) {
 
 const isMain = process.argv[1] !== undefined && pathToFileURL(process.argv[1]).href === import.meta.url;
 if (isMain) {
-  runRace({ log: (line) => console.log(line) }).then(
+  const { values } = parseArgs({ options: { root: { type: "string" } } });
+  runRace({ root: values.root === undefined ? ROOT : resolve(values.root), log: (line) => console.log(line) }).then(
     (code) => {
       process.exitCode = code;
     },

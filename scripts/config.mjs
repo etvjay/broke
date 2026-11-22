@@ -21,3 +21,4 @@ export const DROID_BIN = "droid";
 // A racer gets 20 minutes. Task 11 times one real racer and adjusts this if needed.
 export const RACER_TIMEOUT_MS = 20 * 60 * 1000;
 export const VERIFY_SCRIPT = join(ROOT, "scripts", "verify.mjs");
+export const RACE_SCRIPT = join(ROOT, "scripts", "race.mjs");
