@@ -1,0 +1,16 @@
+{
+  "kind": "type",
+  "status": "passed",
+  "summary": "type: Type \"Favourite colour?\" into \"Question\"",
+  "duration_ms": 145.5,
+  "url": "http://localhost:42825/",
+  "action_id": "5a827f65-c423-4b0d-b759-c1bc15afa678",
+  "element_rect": {
+    "x": 667,
+    "y": 137,
+    "width": 586,
+    "height": 19
+  },
+  "ordinal": 4,
+  "id": "0-4"
+}

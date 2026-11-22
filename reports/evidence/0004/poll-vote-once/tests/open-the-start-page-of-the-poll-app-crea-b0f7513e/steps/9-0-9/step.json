@@ -1,0 +1,10 @@
+{
+  "kind": "",
+  "status": "passed",
+  "summary": "wait: Waiting confirm the created poll is displayed",
+  "duration_ms": 4311.7,
+  "url": "http://localhost:34413/",
+  "action_id": "05848373-dc9c-43f6-8723-9604a996cc90",
+  "ordinal": 9,
+  "id": "0-9"
+}

@@ -1,0 +1,16 @@
+{
+  "kind": "click",
+  "status": "passed",
+  "summary": "click: Clicking the Vote button next to Black in the poll",
+  "duration_ms": 5343.6,
+  "url": "http://localhost:34413/",
+  "action_id": "0c702bb5-033b-4ff5-909f-c8bf43ee585e",
+  "element_rect": {
+    "x": 1212,
+    "y": 519,
+    "width": 35,
+    "height": 19
+  },
+  "ordinal": 13,
+  "id": "1-4"
+}
