@@ -175,6 +175,7 @@ test("a linked node_modules does not make a racer's worktree look dirty", async 
   await addWorktree({ root: repo, path, branch: "race/0009-a", start: git(repo, ["rev-parse", "HEAD"]).trim() });
   assert.equal(git(path, ["status", "--porcelain"]).trim(), "");
 });
+
 test("with no green attempt the lock is released, main stays put, and the reports go to a branch", async () => {
   const ctx = await setup();
   const before = git(ctx.repo, ["rev-parse", "HEAD"]).trim();

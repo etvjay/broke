@@ -188,6 +188,7 @@ test("verify refuses without a git identity and names the git config commands", 
   assert.match(lines.join("\n"), /git config user\.email "you@example\.com"/);
   await assertNoReports(root);
 });
+
 test("classifyRun: passed with exit 0 is a pass", () => {
   assert.equal(classifyRun({ exitCode: 0, runEnd: { status: "passed" } }).outcome, "pass");
 });
