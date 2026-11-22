@@ -1,0 +1,103 @@
+{
+  "run_id": "run",
+  "test_id": "test",
+  "objective": "Click the Vote button next to Green.\nCheck that the message \"Vote counted.\" appears under the poll and that the poll shows \"Green (1)\".\nIn the same browser, click the Vote button next to Black.\nCheck that the message \"You already voted on this poll.\" appears under the poll.\nCheck that the poll still shows \"Black (0)\", so the second vote did not count.",
+  "start_url": "about:blank",
+  "start_time": "2026-11-22T14:33:35.565992+00:00",
+  "config": {
+    "reasoning_provider": "testmuai",
+    "reasoning_model": "v16-alpha",
+    "vision_provider": "testmuai",
+    "vision_model": "v16-alpha",
+    "screen_width": 1920,
+    "screen_height": 1080,
+    "max_steps": 50
+  },
+  "credits_consumed": 22.902267499999997,
+  "steps": [
+    {
+      "step": 1,
+      "duration_ms": 4857.7,
+      "url": "http://localhost:43075/",
+      "status": "continue",
+      "step_file": "step_001.json",
+      "action_type": "click",
+      "action_target": "Clicking the Vote button next to Green",
+      "success": true,
+      "method": "dom_action"
+    },
+    {
+      "step": 2,
+      "duration_ms": 9897.4,
+      "url": "http://localhost:43075/",
+      "status": "continue",
+      "step_file": "step_002.json",
+      "action_type": "analyze",
+      "action_target": "ANALYZE(textual_visual, 'The poll shows \"Green (1)\".', key='green_vote_count_vis",
+      "success": true,
+      "method": "action"
+    },
+    {
+      "step": 3,
+      "duration_ms": 5.7,
+      "url": "http://localhost:43075/",
+      "status": "passed",
+      "step_file": "step_003.json",
+      "action_type": "assert",
+      "action_target": "the message \"Vote counted.\" appears under the poll and the poll shows \"Green (1)",
+      "success": true,
+      "method": "assertion"
+    },
+    {
+      "step": 4,
+      "duration_ms": 5100.5,
+      "url": "http://localhost:43075/",
+      "status": "continue",
+      "step_file": "step_004.json",
+      "action_type": "click",
+      "action_target": "Clicking Vote for Black in the Best tea poll",
+      "success": true,
+      "method": "dom_action"
+    },
+    {
+      "step": 5,
+      "duration_ms": 19984.7,
+      "url": "http://localhost:43075/",
+      "status": "continue",
+      "step_file": "step_005.json",
+      "action_type": "analyze",
+      "action_target": "ANALYZE(visual, 'The second vote did not count.', key='second_vote_not_counted')",
+      "success": true,
+      "method": "action"
+    },
+    {
+      "step": 6,
+      "duration_ms": 5.7,
+      "url": "http://localhost:43075/",
+      "status": "passed",
+      "step_file": "step_006.json",
+      "action_type": "assert",
+      "action_target": "the message \"You already voted on this poll.\" appears under the poll.",
+      "success": true,
+      "method": "assertion"
+    },
+    {
+      "step": 7,
+      "duration_ms": 5.5,
+      "url": "http://localhost:43075/",
+      "status": "passed",
+      "step_file": "step_007.json",
+      "action_type": "assert",
+      "action_target": "the poll still shows \"Black (0)\", so the second vote did not count.",
+      "success": true,
+      "method": "assertion"
+    }
+  ],
+  "errors": [],
+  "end_time": "2026-11-22T14:34:26.642041+00:00",
+  "total_duration_ms": 0,
+  "final_status": "complete",
+  "final_url": "http://localhost:43075/",
+  "total_steps": 7,
+  "reason": "Objective completed"
+}

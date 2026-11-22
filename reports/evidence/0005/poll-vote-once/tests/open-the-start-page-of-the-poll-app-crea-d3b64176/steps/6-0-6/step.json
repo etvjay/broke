@@ -1,0 +1,16 @@
+{
+  "kind": "type",
+  "status": "passed",
+  "summary": "type: Typing Green into Options textbox",
+  "duration_ms": 4269.0,
+  "url": "http://localhost:43075/",
+  "action_id": "a3186f28-4d80-49a9-8481-92482737b292",
+  "element_rect": {
+    "x": 666,
+    "y": 206,
+    "width": 588,
+    "height": 57
+  },
+  "ordinal": 6,
+  "id": "0-6"
+}

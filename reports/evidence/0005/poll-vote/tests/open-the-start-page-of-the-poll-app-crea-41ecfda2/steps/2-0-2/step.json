@@ -1,0 +1,10 @@
+{
+  "kind": "wait",
+  "status": "passed",
+  "summary": "wait: PRIMARY: start page of the poll app is open",
+  "duration_ms": 3879.1,
+  "url": "http://localhost:38207/",
+  "action_id": "c7c72c04-4f3c-4356-80ee-4f421975ed3f",
+  "ordinal": 2,
+  "id": "0-2"
+}

@@ -1,0 +1,10 @@
+{
+  "kind": "assert",
+  "status": "passed",
+  "summary": "assert: the poll now shows \"Blue (1)\"",
+  "duration_ms": 5.4,
+  "url": "http://localhost:38207/",
+  "action_id": "b3663c27-7ba4-410c-8495-56dcd1cd5e2c",
+  "ordinal": 15,
+  "id": "0-15"
+}

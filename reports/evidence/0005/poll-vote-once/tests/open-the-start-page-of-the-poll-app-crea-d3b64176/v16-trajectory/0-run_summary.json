@@ -1,0 +1,106 @@
+{
+  "run_id": "run",
+  "test_id": "test",
+  "objective": "Open the start page of the poll app.\nCreate a poll: in the Question box, type Best tea?, and in the Options box, type Green on one line and Black on the next line.\nThen click Create poll.",
+  "start_url": "about:blank",
+  "start_time": "2026-11-22T14:33:02.972384+00:00",
+  "config": {
+    "reasoning_provider": "testmuai",
+    "reasoning_model": "v16-alpha",
+    "vision_provider": "testmuai",
+    "vision_model": "v16-alpha",
+    "screen_width": 1920,
+    "screen_height": 1080,
+    "max_steps": 50
+  },
+  "credits_consumed": 10.4848375,
+  "steps": [
+    {
+      "step": 1,
+      "duration_ms": 0.4,
+      "url": "http://localhost:43075/",
+      "status": "continue",
+      "step_file": "step_001.json",
+      "action_type": "navigate",
+      "action_target": "Navigate to http://localhost:43075",
+      "success": true,
+      "method": "action"
+    },
+    {
+      "step": 2,
+      "duration_ms": 4429.2,
+      "url": "http://localhost:43075/",
+      "status": "continue",
+      "step_file": "step_002.json",
+      "action_type": "wait",
+      "action_target": "PRIMARY: Open the start page of the poll app",
+      "success": true,
+      "method": "action"
+    },
+    {
+      "step": 3,
+      "duration_ms": 5221.0,
+      "url": "http://localhost:43075/",
+      "status": "continue",
+      "step_file": "step_003.json",
+      "action_type": "wait",
+      "action_target": "queued plan (3 steps): type \"Question\"; type \"Options, one per line\"; click \"Cre",
+      "success": true,
+      "method": "action"
+    },
+    {
+      "step": 4,
+      "duration_ms": 208.8,
+      "url": "http://localhost:43075/",
+      "status": "continue",
+      "step_file": "step_004.json",
+      "action_type": "type",
+      "action_target": "Type \"Best tea?\" into \"Question\"",
+      "success": true,
+      "method": "dom_action"
+    },
+    {
+      "step": 5,
+      "duration_ms": 285.1,
+      "url": "http://localhost:43075/",
+      "status": "continue",
+      "step_file": "step_005.json"
+    },
+    {
+      "step": 6,
+      "duration_ms": 4268.0,
+      "url": "http://localhost:43075/",
+      "status": "continue",
+      "step_file": "step_006.json",
+      "action_type": "type",
+      "action_target": "Typing Green into Options textbox",
+      "success": true,
+      "method": "dom_action"
+    },
+    {
+      "step": 7,
+      "duration_ms": 5894.8,
+      "url": "http://localhost:43075/",
+      "status": "continue",
+      "step_file": "step_007.json",
+      "action_type": "click",
+      "action_target": "Clicking Create poll button",
+      "success": true,
+      "method": "dom_action"
+    },
+    {
+      "step": 8,
+      "duration_ms": 3966.3,
+      "url": "http://localhost:43075/",
+      "status": "complete",
+      "step_file": "step_008.json"
+    }
+  ],
+  "errors": [],
+  "end_time": "2026-11-22T14:33:35.533481+00:00",
+  "total_duration_ms": 0,
+  "final_status": "complete",
+  "final_url": "http://localhost:43075/",
+  "total_steps": 8,
+  "reason": "Objective completed"
+}
