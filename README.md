@@ -76,7 +76,7 @@ The drift check fails when:
 
 Reports 0003 to 0008 each test an app change that the builder agent made, with a failing test or browser check written first. None was planted to fail. Reports 0006 to 0008 were the last three tries the owner allowed, and all three passed. No run has gone red, so the race has not run on a real red, and no pick has run. The race is tested with fake racers and a fake verify. One Droid racer has run once, on a one-line test change, through the same process code. The 20-minute limit and a racer's cost on a real fix are untested.
 
-The Kane balance fell by 776 credits from report 0001 to report 0008. The committed reports, and one stray run that was never committed (about 81 credits by its visible records), account for about 693 of that. The other 83 credits have no known cause.
+The Kane balance fell by 776 credits between the balance recorded after report 0001 and the one after report 0008. Reports 0002 to 0008, and one stray run that was never committed (about 81 credits by its visible records), account for about 693 of that. The other 83 credits have no known cause.
 
 ## The Stop hook and the race
 
