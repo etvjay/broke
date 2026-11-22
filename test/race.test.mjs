@@ -101,14 +101,14 @@ function racers(modes) {
   for (const letter of ["a", "b", "c"]) process.env[`FAKE_RACER_${letter.toUpperCase()}`] = modes[letter] ?? "none";
 }
 
-async function startRace(ctx, modes = {}) {
+async function startRace(ctx, modes = {}, { racerTimeoutMs = 60000 } = {}) {
   racers(modes);
   const lines = [];
   const code = await runRace({
     root: ctx.repo,
     droidBin: ctx.droidBin,
     verifyScript: FAKE_VERIFY,
-    racerTimeoutMs: 60000,
+    racerTimeoutMs,
     log: (line) => lines.push(line)
   });
   return { code, lines };
@@ -152,6 +152,17 @@ test("a racer that makes no commit is failed and is not verified", async () => {
   assert.equal(existsSync(join(raceDir(1), "a", "summary.json")), true);
   assert.equal((await readLock()).state, "awaiting-pick");
   await releaseLock();
+});
+
+test("a racer stopped for time fails as racer timed out, even if it exits 0", async () => {
+  const ctx = await setup();
+  const { code } = await startRace(ctx, { a: "stop-clean", b: "none", c: "none" }, { racerTimeoutMs: 1000 });
+  assert.equal(code, 1);
+  const record = JSON.parse(await readFile(join(raceDir(1), "attempts.json"), "utf8"));
+  assert.equal(record.attempts[0].status, "racer failed");
+  assert.equal(record.attempts[0].reason, "the racer timed out");
+  assert.equal(existsSync(join(raceDir(1), "a", "summary.json")), false);
+  assert.equal(await readLock(), null);
 });
 
 test("a racer that changes files outside app/ and explain/ is refused without a verify", async () => {

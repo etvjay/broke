@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 // Test double for droid exec. Each racer's behavior comes from FAKE_RACER_<LETTER>:
 // green or red commits an app change, none makes no commit, outside commits a
-// flow edit, and dirty changes app/ without committing.
+// flow edit, dirty changes app/ without committing, and stop-clean runs until it is
+// stopped, then exits 0 without a commit.
 import { execFileSync } from "node:child_process";
 import { appendFileSync, writeFileSync } from "node:fs";
 import { basename, join } from "node:path";
@@ -19,6 +20,12 @@ const order = (line) => {
 
 order(`start ${letter}`);
 console.log(JSON.stringify({ type: "start", letter, mode, brief }));
+if (mode === "stop-clean") {
+  // Runs until it is stopped, then exits 0 without a commit, as a racer can after a timeout.
+  process.on("SIGTERM", () => process.exit(0));
+  setInterval(() => {}, 1000);
+  await new Promise(() => {});
+}
 if (mode === "green" || mode === "red") {
   writeFileSync(join(worktree, "app", "fix.txt"), `${mode}\n`);
   git("add", "-A");

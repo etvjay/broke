@@ -185,7 +185,7 @@ async function evaluateAttempt({ root, number, letter, base, racer, verifyScript
     flows: null,
     drift: null
   };
-  if (racer.code !== 0) return judged(attempt, "racer failed", racerReason(racer));
+  if (racer.timedOut || racer.code !== 0) return judged(attempt, "racer failed", racerReason(racer));
   if ((await git(path, ["status", "--porcelain"])).trim() !== "") {
     return judged(attempt, "uncommitted changes", "the racer left changes that are not committed");
   }
