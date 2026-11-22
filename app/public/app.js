@@ -48,6 +48,10 @@ function renderPoll(poll) {
     row.append(button);
     card.append(row);
   });
+  const total = document.createElement("p");
+  total.className = "total";
+  total.textContent = `${poll.totalVotes} ${poll.totalVotes === 1 ? "vote" : "votes"} in total`;
+  card.append(total);
   const message = document.createElement("p");
   message.className = "status";
   message.textContent = voteMessages.get(poll.id) ?? "";
