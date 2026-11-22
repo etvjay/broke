@@ -78,6 +78,8 @@ Reports 0003 to 0008 each test an app change that the builder agent made, with a
 
 The Kane balance fell by 776.26 credits between the balance recorded after report 0001 and the one after report 0008. Kane's session records account for 695.39 of that: the 21 runs behind reports 0002 to 0008, plus three runs from one stray run that was never committed. The stray run cost 82.56 credits. That leaves 80.87 credits with no known cause.
 
+Two one-step probe runs each lowered the balance by more than their session record shows. The gaps were 1.95 and 0.39 credits. That may be a small charge that the session records leave out. Two runs are too few to say how large it is or whether it applies to every run.
+
 Git history keeps some data from the first run. Commit `b560bb5`, which commits report 0001, contains three LambdaTest share links, the account name, and the organization and user IDs. Commits `091d665` and `910cc99` removed them from the tracked files, but the history was kept, so each report's tested commit still exists. Kane share links expire seven days after they are made, so the three report 0001 links should expire around 29 November 2026.
 
 ## The Stop hook and the race
