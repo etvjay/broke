@@ -27,7 +27,7 @@ Verify uses your Kane CLI login. Sign in with `kane-cli login --oauth`, which op
 
 Check your credits with `kane-cli balance`. Verify stops below 2,000 credits. All three flows cost about 33 to 63 credits per verify.
 
-You do not need Kane to read the results. Every report and race comparison is committed in this repo.
+You do not need Kane to read the results. Every verify report is committed on main. Each race's records are committed on branch `race/NNNN-report`, and a pick copies them onto main.
 
 ## The three flows
 
@@ -70,7 +70,7 @@ After an agent turn that changes `app/` or `explain/`, the Stop hook (`.factory/
 4. The runner writes `comparison.md`. It lists each attempt's verdicts, drift result, and changed lines. It names no winner.
 5. The owner picks a green attempt: `npm run race:pick -- NNNN a --reason "<why>"`. The runner merges it, then verifies the merged code. If that verify is green, the merge and its report reach main together. Otherwise main stays where it was.
 
-If no attempt is green, nothing merges. The records stay on branch `race/NNNN-report`, and the race lock clears so the owner can decide the next step. A race costs about three verifies' worth of Kane credits.
+If no attempt is green, nothing merges. The records go to branch `race/NNNN-report`, and the race lock clears so the owner can decide the next step. A green race puts its records on the same branch while it waits for the pick. A race costs about three verifies' worth of Kane credits.
 
 ## Owner commands
 

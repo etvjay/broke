@@ -1,6 +1,7 @@
 import { pathToFileURL } from "node:url";
 import { parseArgs } from "node:util";
 import { lockPath, readLock, releaseLock } from "./lib/lock.mjs";
+import { reportBranchName } from "./lib/race-support.mjs";
 import { padNumber } from "./lib/report.mjs";
 
 // Clears the lock of a race that has green attempts and no pick. Worktrees and branches stay.
@@ -21,7 +22,7 @@ export async function runClose({ number, log = () => {} }) {
     return 2;
   }
   await releaseLock();
-  log(`Closed race ${n} without a pick. Its worktrees and branches stay for inspection.`);
+  log(`Closed race ${n} without a pick. Its records are on ${reportBranchName(raceNumber)}. Its worktrees and branches stay for inspection.`);
   return 0;
 }
 

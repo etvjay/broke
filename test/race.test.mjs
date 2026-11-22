@@ -201,6 +201,23 @@ test("green attempts wait for a pick: main does not move and the comparison name
   await releaseLock();
 });
 
+test("a green race keeps its records on the report branch while it waits for a pick", async () => {
+  const ctx = await setup();
+  const before = git(ctx.repo, ["rev-parse", "HEAD"]).trim();
+  const { code } = await startRace(ctx, { a: "red", b: "green", c: "none" });
+  assert.equal(code, 0);
+  assert.equal(git(ctx.repo, ["rev-parse", "HEAD"]).trim(), before);
+  assert.match(git(ctx.repo, ["show", "race/0001-report:reports/races/0001/comparison.md"]), /# Race 0001 comparison/);
+  assert.match(git(ctx.repo, ["show", "race/0001-report:reports/races/0001/attempts.json"]), /"letter": "b"/);
+  await releaseLock();
+});
+
+test("race:close keeps the records of a green race that is closed without a pick", async () => {
+  const ctx = await setup();
+  await startRace(ctx, { a: "green" });
+  assert.equal(await runClose({ number: "0001", log: () => {} }), 0);
+  assert.match(git(ctx.repo, ["show", "race/0001-report:reports/races/0001/comparison.md"]), /# Race 0001 comparison/);
+});
 test("a red that is not an app fault does not start a race", async () => {
   const ctx = await setup({ family: "automation_bug" });
   const { code, lines } = await startRace(ctx, { a: "green" });

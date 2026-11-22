@@ -73,6 +73,7 @@ export async function runRace({
     );
     for (const attempt of attempts) log(`attempt ${attempt.letter}: ${attempt.status}. ${attempt.reason}`);
     if (attempts.some((attempt) => attempt.status === "green")) {
+      await keepRecords({ root, number, dir });
       await setLockState("awaiting-pick");
       log(`race ${n}: at least one attempt is green. Compare them in ${join(dir, "comparison.md")}.`);
       log(`The owner picks one: npm run race:pick -- ${n} <a|b|c> --reason "<text>"`);
@@ -220,7 +221,7 @@ async function evaluateAttempt({ root, number, letter, base, racer, verifyScript
   return judged(attempt, "error", `${errored.length > 0 ? `${errored.join(", ")} errored` : "verify errored"}.`);
 }
 
-// The records go on a branch of their own, so a race with no green attempt leaves a trace in git and main does not move.
+// The records go on a branch of their own, so main does not move. A race keeps them when it ends with a green attempt waiting for a pick, and when no attempt is green.
 async function keepRecords({ root, number, dir }) {
   const branch = reportBranchName(number);
   const scratch = await mkdtemp(join(tmpdir(), "why-it-broke-records-"));
