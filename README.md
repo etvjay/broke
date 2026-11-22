@@ -11,6 +11,7 @@ Built for the [KaneCLI Online Hackathon](https://www.kaneclihack.sh/) by TestMu 
 - Chromium or Chrome, for Kane's desktop browser.
 - `unzip`, which reads Kane's evidence packs.
 - Factory Droid, with `droid` on your PATH. The Stop hook and the racers use it.
+- A git identity for this repo, set with `git config user.name` and `git config user.email`. Verify commits each report under it.
 
 ## Start the app
 

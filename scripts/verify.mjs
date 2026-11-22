@@ -36,7 +36,7 @@ export async function runVerify({
     return 2;
   }
   if (!(await gitConfig(root, "user.name")) || !(await gitConfig(root, "user.email"))) {
-    log("refused: git user.name or user.email is not set. The owner sets them.");
+    log(`refused: git user.name or user.email is not set. Verify commits its report, so set both in this repo: git config user.name "Your Name" and git config user.email "you@example.com".`);
     return 2;
   }
   const head = (await git(root, ["rev-parse", "HEAD"])).trim();

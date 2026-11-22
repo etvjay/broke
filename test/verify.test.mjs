@@ -171,6 +171,23 @@ test("an app that ignores SIGTERM writes no coverage, so the flow is an error", 
   assert.match(await readFile(reportPath(root), "utf8"), /did not stop cleanly/);
 });
 
+test("verify refuses without a git identity and names the git config commands", { timeout: 120000 }, async () => {
+  const root = await makeRepo();
+  await git(root, ["config", "--unset", "user.name"]);
+  await git(root, ["config", "--unset", "user.email"]);
+  const savedGlobal = process.env.GIT_CONFIG_GLOBAL;
+  process.env.GIT_CONFIG_GLOBAL = join(tmpdir(), "wib-no-global-git-config");
+  const lines = [];
+  try {
+    assert.equal(await runVerify({ root, kaneBin: FAKE_KANE, kaneEnv: scenario("pass"), log: (line) => lines.push(line) }), 2);
+  } finally {
+    if (savedGlobal === undefined) delete process.env.GIT_CONFIG_GLOBAL;
+    else process.env.GIT_CONFIG_GLOBAL = savedGlobal;
+  }
+  assert.match(lines.join("\n"), /git config user\.name "Your Name"/);
+  assert.match(lines.join("\n"), /git config user\.email "you@example\.com"/);
+  await assertNoReports(root);
+});
 test("classifyRun: passed with exit 0 is a pass", () => {
   assert.equal(classifyRun({ exitCode: 0, runEnd: { status: "passed" } }).outcome, "pass");
 });
