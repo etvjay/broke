@@ -1,3 +1,4 @@
+import { parseExpressionAt } from "acorn";
 import { countKey } from "./coverage.mjs";
 import { functionKey } from "./functions.mjs";
 
@@ -44,6 +45,7 @@ export function renderReport({ number, head, flows, drift, driftNote = null, fun
 function flowSection(flow, functions, written, status) {
   const lines = [`## ${flow.name}: ${flow.outcome}`, "", `- Verdict: ${flow.outcome}`, `- Reason: ${shown(flow.reason)}`];
   if (flow.verdict) lines.push(...verdictLines(flow.verdict));
+  if (flow.evidence) lines.push(...evidenceLines(flow.evidence));
   if (flow.counts === null) {
     lines.push("", "No coverage for this run, so no trace is shown.");
     return lines;
@@ -69,6 +71,25 @@ function verdictLines(verdict) {
   ];
 }
 
+function evidenceLines(evidence) {
+  if (evidence.status === "none" || evidence.status === "missing" || evidence.status === "error") {
+    return [`- Evidence: not copied. ${evidence.reason}`];
+  }
+  const lines = [];
+  if (evidence.status === "copied") {
+    lines.push(`- Evidence: [redacted copy](${evidence.dir}/), ${evidence.files.length} text files, manifest sha256 ${evidence.manifest}`);
+  } else {
+    lines.push("- Evidence: no text file was copied.");
+  }
+  if (evidence.blocked.length > 0) {
+    lines.push(`- Left out by the second scan: ${evidence.blocked.map((item) => `${item.path} (${item.kinds.join(", ")})`).join("; ")}`);
+  }
+  if (evidence.binarySkipped > 0) {
+    lines.push(`- Not copied: screenshots and other binary files (${evidence.binarySkipped}).`);
+  }
+  return lines;
+}
+
 function traceEntry(fn, written, status) {
   const key = fn.name === null ? null : functionKey(fn.file, fn.name);
   const paragraphs = [];
@@ -89,10 +110,11 @@ function traceEntry(fn, written, status) {
   return lines;
 }
 
-// The header up to the body's opening brace, on one line.
+// The header up to the body, on one line. A parameter can hold a brace, so the
+// parser finds where the body starts.
 function signatureOf(fn) {
-  const brace = fn.source.indexOf("{");
-  return oneLine(brace === -1 ? fn.source.split("\n")[0] : fn.source.slice(0, brace));
+  const body = parseExpressionAt(fn.source, 0, { ecmaVersion: "latest" }).body;
+  return oneLine(fn.source.slice(0, body.start));
 }
 
 function sourceBlock(source) {

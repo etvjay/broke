@@ -38,13 +38,13 @@ async function run() {
   emit({ step: 2, status: "done", remark: "created a poll" });
   emit({ step: 3, status: checked ? "done" : "failed", remark: "voted" });
   if (scenario === "no-run-end") return finish(1);
-  emit({ type: "coverage", status: "skipped", reason: "not_assurance_project", pack: "/tmp/fake-kane.evidence" });
+  emit({ type: "coverage", status: "skipped", reason: "not_assurance_project", pack: process.env.FAKE_KANE_PACK || "/tmp/fake-kane.evidence" });
   if (scenario === "fail") {
     emit({
       type: "run_end",
       status: "failed",
       credits_consumed: 1.1,
-      verdict: { confirmed: true, status: "failed", family: "app_bug", category: "functional", severity: "high", root_cause: "The vote count did not change", agent_fault_assessment: "app", confidence: 0.8, suggestion: "Check castVote", one_liner: "Vote did not count", culprit_step: 3, relevant_steps: [3], mode: "agent" }
+      verdict: { confirmed: true, status: "failed", family: "app_bug", category: "functional", severity: "high", root_cause: process.env.FAKE_KANE_ROOT_CAUSE || "The vote count did not change", agent_fault_assessment: "app", confidence: 0.8, suggestion: "Check castVote", one_liner: "Vote did not count", culprit_step: 3, relevant_steps: [3], mode: "agent" }
     });
     return finish(1);
   }

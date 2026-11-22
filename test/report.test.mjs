@@ -156,3 +156,59 @@ test("a flow that errored with no coverage says so instead of showing an empty t
   assert.match(sectionOf(text, "poll-vote-once.md: error"), /No coverage for this run/);
   assert.match(text, /The ran-in-no-flow check was skipped/);
 });
+
+test("a copied evidence pack links its redacted copy and names what the scan left out", () => {
+  const withEvidence = {
+    ...failFlow,
+    evidence: {
+      status: "copied",
+      reason: null,
+      dir: "evidence/0001/poll-vote",
+      files: [{ path: "run.yaml" }, { path: "tests/x/tui.log" }],
+      manifest: "c".repeat(64),
+      blocked: [{ path: "tests/x/token.log", kinds: ["token"] }],
+      binarySkipped: 1
+    }
+  };
+  const text = renderReport({ number: 1, head: HEAD, flows: [passFlow, withEvidence], drift, functions, explanations });
+  const body = sectionOf(text, "poll-vote.md: fail");
+  assert.match(body, /- Evidence: \[redacted copy\]\(evidence\/0001\/poll-vote\/\), 2 text files, manifest sha256 c{64}/);
+  assert.match(body, /- Left out by the second scan: tests\/x\/token\.log \(token\)/);
+  assert.match(body, /- Not copied: screenshots and other binary files \(1\)/);
+});
+
+test("a flow whose pack is missing says so in its section", () => {
+  const missing = {
+    ...failFlow,
+    evidence: {
+      status: "missing",
+      reason: "Kane's evidence pack is not on disk.",
+      dir: "evidence/0001/poll-vote",
+      files: [],
+      blocked: [],
+      binarySkipped: 0,
+      manifest: null
+    }
+  };
+  const text = renderReport({ number: 1, head: HEAD, flows: [missing], drift, functions, explanations });
+  assert.match(sectionOf(text, "poll-vote.md: fail"), /- Evidence: not copied\. Kane's evidence pack is not on disk\./);
+});
+
+test("a signature with a destructured parameter keeps the whole parameter list", () => {
+  const made = scanSource("function make({ id }) {\n  return id;\n}\n", FILE);
+  const flow = {
+    name: "poll-create.md",
+    outcome: "pass",
+    reason: "passed",
+    verdict: null,
+    steps: 1,
+    credits: 1,
+    seconds: 1,
+    counts: new Map(made.map((fn) => [countKey(fn.file, fn.startOffset), 1]))
+  };
+  const explained = made.map((fn) => ({ file: fn.file, name: fn.name, explanation: "Makes an id.", hash: fn.hash }));
+  const ranByFlow = { [functionKey(FILE, "make")]: ["poll-create.md"] };
+  const drifted = checkDrift({ functions: made, explanations: explained, ranByFlow });
+  const text = renderReport({ number: 2, head: HEAD, flows: [flow], drift: drifted, functions: made, explanations: explained });
+  assert.match(text, /Signature: `function make\(\{ id \}\)`/);
+});

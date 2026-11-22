@@ -11,6 +11,7 @@ import { readRun } from "../scripts/lib/coverage.mjs";
 import { sha256File } from "../scripts/lib/hash.mjs";
 import { classifyRun } from "../scripts/lib/kane.mjs";
 import { runVerify } from "../scripts/verify.mjs";
+import { PACK_ENTRIES, zipEntries } from "./fixtures/evidence-pack.mjs";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const FAKE_KANE = join(ROOT, "test", "fixtures", "fake-kane.mjs");
@@ -185,4 +186,36 @@ test("readRun maps app functions to run counts and fails on an empty folder", as
   assert.equal(counts.get("app/store.mjs:10"), 3);
   assert.equal(counts.get("app/store.mjs:50"), 0);
   await assert.rejects(readRun(empty, appDir), /no coverage files/);
+});
+
+async function writePack() {
+  const dir = await mkdtemp(join(tmpdir(), "wib-pack-"));
+  temps.push(dir);
+  const path = join(dir, "pack.evidence");
+  await writeFile(path, zipEntries(PACK_ENTRIES));
+  return path;
+}
+
+test("a pass with an evidence pack copies the redacted text and links it from the report", { timeout: 120000 }, async () => {
+  const root = await makeRepo();
+  const packPath = await writePack();
+  assert.equal(await runVerify({ root, kaneBin: FAKE_KANE, kaneEnv: { FAKE_KANE_SCENARIO: "pass", FAKE_KANE_PACK: packPath } }), 0);
+  const copy = join(root, "reports", "evidence", "0001", "poll-create");
+  assert.match(await readFile(join(copy, "tests", "open-page", "logs", "tui.log"), "utf8"), /Profile <profile> opened/);
+  await assert.rejects(readFile(join(copy, "tests", "open-page", "logs", "token.log")), { code: "ENOENT" });
+  const report = await readFile(reportPath(root), "utf8");
+  assert.match(report, /\[redacted copy\]\(evidence\/0001\/poll-create\/\), 4 text files/);
+  assert.match(report, /tests\/open-page\/logs\/token\.log \(token\)/);
+  assert.match(await git(root, ["show", "--stat", "--format=", "HEAD"]), /reports\/evidence\/0001\/poll-create\/run\.yaml/);
+  assert.equal((await git(root, ["status", "--porcelain"])).trim(), "");
+});
+
+test("a Kane verdict that names an email or a home path is redacted before the report is written", { timeout: 120000 }, async () => {
+  const root = await makeRepo();
+  const rootCause = "Vote failed for owner@example.com under /home/ubuntu/kane";
+  assert.equal(await runVerify({ root, kaneBin: FAKE_KANE, kaneEnv: { FAKE_KANE_SCENARIO: "fail", FAKE_KANE_ROOT_CAUSE: rootCause } }), 1);
+  const report = await readFile(reportPath(root), "utf8");
+  assert.match(report, /- Root cause: Vote failed for <email> under ~\/kane/);
+  assert.equal(report.includes("owner@example.com"), false);
+  assert.equal(report.includes("/home/ubuntu"), false);
 });

@@ -7,11 +7,13 @@ import { checkDrift } from "./drift.mjs";
 import { describeExit, freePort, startApp, stopApp, waitForApp } from "./lib/app-process.mjs";
 import { getBalance } from "./lib/balance.mjs";
 import { countKey, readRun } from "./lib/coverage.mjs";
+import { prepareEvidence, writeEvidenceFiles } from "./lib/evidence.mjs";
 import { readExplanations } from "./lib/explanations.mjs";
 import { functionKey, scanApp } from "./lib/functions.mjs";
 import { git, gitConfig } from "./lib/git.mjs";
 import { sha256File } from "./lib/hash.mjs";
 import { classifyRun, runKane } from "./lib/kane.mjs";
+import { redact, redactFields, scanSecrets } from "./lib/redact.mjs";
 import { padNumber, renderReport } from "./lib/report.mjs";
 
 const COAUTHOR = "Co-authored-by: factory-droid[bot] <138933559+factory-droid[bot]@users.noreply.github.com>";
@@ -52,6 +54,12 @@ export async function runVerify({
     log(`${flow.name}: ${flow.outcome}, ${flow.reason}`);
     flows.push(flow);
   }
+  for (const flow of flows) {
+    flow.reason = redact(flow.reason);
+    flow.verdict = flow.verdict === null ? null : redactFields(flow.verdict);
+    flow.evidence = await prepareEvidence({ packPath: flow.packPath, dir: `evidence/${padNumber(number)}/${flow.name.replace(/\.md$/, "")}` });
+    log(`${flow.name}: evidence ${flow.evidence.status}, ${flow.evidence.files.length} text files, ${flow.evidence.blocked.length} left out`);
+  }
   const complete = flows.every((flow) => flow.outcome !== "error");
   const drift = checkDrift({
     functions,
@@ -67,7 +75,13 @@ export async function runVerify({
     functions,
     explanations
   });
-  await commitReport({ root, number, head, markdown });
+  const leftovers = scanSecrets(markdown).filter((kind) => kind !== "auth value");
+  if (leftovers.length > 0) {
+    log(`refused: the report holds ${leftovers.join(", ")} text after redaction, so nothing was written or committed. Fix the source or the flow text, then run verify again.`);
+    return 2;
+  }
+  const evidenceDirs = await writeEvidence(root, flows);
+  await commitReport({ root, number, head, markdown, evidenceDirs });
   log(`drift: ${drift.ok ? "passed" : `failed, ${drift.problems.length} problem(s)`}`);
   log(`report: reports/${padNumber(number)}.md committed`);
   return exitCodeFor(flows, drift);
@@ -168,11 +182,22 @@ function buildRanByFlow(functions, flows) {
   return ranByFlow;
 }
 
-async function commitReport({ root, number, head, markdown }) {
+// Writes each flow's clean evidence copy under reports/ and returns the folders written.
+async function writeEvidence(root, flows) {
+  const dirs = [];
+  for (const flow of flows) {
+    if (flow.evidence.files.length === 0) continue;
+    await writeEvidenceFiles(join(root, "reports", flow.evidence.dir), flow.evidence.files);
+    dirs.push(`reports/${flow.evidence.dir}`);
+  }
+  return dirs;
+}
+
+async function commitReport({ root, number, head, markdown, evidenceDirs }) {
   const relPath = `reports/${padNumber(number)}.md`;
   await mkdir(join(root, "reports"), { recursive: true });
   await writeFile(join(root, relPath), markdown, { flag: "wx" });
-  await git(root, ["add", "--", relPath]);
+  await git(root, ["add", "--", relPath, ...evidenceDirs]);
   await git(root, [
     "commit",
     "-q",
