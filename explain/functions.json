@@ -1,0 +1,224 @@
+[
+  {
+    "file": "app/server.mjs",
+    "name": "addPollRoute",
+    "explanation": "Reads the new poll from the request body and saves it. It answers 201 with the poll, or 400 with the validation message when the input is not usable.",
+    "hash": "a24f0d40bb379d836fb37c9e700d8659b560dfabe0b094beb7a97d966cf3f485"
+  },
+  {
+    "file": "app/server.mjs",
+    "name": "addPollTask",
+    "explanation": "Loads the poll list, adds the new poll, saves the list, and returns the new poll. It runs inside the write queue.",
+    "hash": "44756f7b2d11984dfa7ab9cf78ef112f0cd0d5020d895ba4190073fdb880e31c"
+  },
+  {
+    "file": "app/server.mjs",
+    "name": "announceListening",
+    "explanation": "Prints the address the server listens on once the port is open.",
+    "hash": "7dffefb1e7fe6b81602517f6d8fe7fff48b3d3abf8a14f43e1afe31817f649f5"
+  },
+  {
+    "file": "app/server.mjs",
+    "name": "castVoteTask",
+    "explanation": "Loads the poll list, records the vote, and saves the list only when the vote counted. It returns the outcome and the updated poll.",
+    "hash": "acfa08e3da0741ab78a9b63f0ab263913533a2c5ff3867d01ee5ba6a5c25b0f2"
+  },
+  {
+    "file": "app/server.mjs",
+    "name": "closeServer",
+    "explanation": "Stops accepting new connections, closes open ones, and exits the process with code 0 once the server has closed.",
+    "hash": "7ee45d944fd2fe9a28bcfdd0d4d72323f44329e6288ec4be3c894eaff722af77"
+  },
+  {
+    "file": "app/server.mjs",
+    "name": "createServer",
+    "explanation": "Creates the HTTP server for the poll app. Every request it receives goes to the request handler, which uses the given data file for storage.",
+    "hash": "9f57772f69b95e12fb251761c45c434b8b391730f618138761e9b9db57dea89c"
+  },
+  {
+    "file": "app/server.mjs",
+    "name": "ensureVoter",
+    "explanation": "Returns the voter id from the browser cookie. A browser without a valid cookie gets a new id, and the response sets the cookie.",
+    "hash": "1c1be8e3250e19cbbcee77da06caaa9d0400d694df5461207ba66e4c61a7a39b"
+  },
+  {
+    "file": "app/server.mjs",
+    "name": "exitAfterClose",
+    "explanation": "Exits the process with code 0 once the server has finished closing.",
+    "hash": "dcbb87d39b88916e4797ba42a8b5c194cc0c6633f2686eb569e69c338873693b"
+  },
+  {
+    "file": "app/server.mjs",
+    "name": "handleRequest",
+    "explanation": "Hands each incoming request to serveRequest. The handler does not wait for it, because serveRequest sends the response itself.",
+    "hash": "cc88c5133dc7b29798e1a586a1664459c57a63c24766b4026a76a81029ecdb18"
+  },
+  {
+    "file": "app/server.mjs",
+    "name": "holdQueue",
+    "explanation": "Stores the release function for the current task, so the next queued task waits until this one finishes.",
+    "hash": "0a0d46247435cd8a8cc42cfbce37306a805dd6c6a1ee346a52a2f5c1a93345bf"
+  },
+  {
+    "file": "app/server.mjs",
+    "name": "readCookie",
+    "explanation": "Finds one named value in a Cookie header and returns it, or null when the cookie is missing.",
+    "hash": "46a070dc6049281ba7f63fcaa1d0b3a5fe1b434d719168726da2e2b93100763f"
+  },
+  {
+    "file": "app/server.mjs",
+    "name": "readJsonBody",
+    "explanation": "Reads the request body, enforces a 10 KB size limit, and parses it as JSON. An empty body counts as an empty object. A body that is too large or not valid JSON becomes an error with a status code.",
+    "hash": "f5726059b403e1ead16d89a39a85ffe1bedbfc0b1c9136472b5811bc0922aa92"
+  },
+  {
+    "file": "app/server.mjs",
+    "name": "releaseQueue",
+    "explanation": "Releases the queue after the task finishes, whether it succeeded or failed, so the next queued task can start.",
+    "hash": "6d4e4bcd63233ba94365f34a84e51554d9d4b6b907226d6acea41445460662a0"
+  },
+  {
+    "file": "app/server.mjs",
+    "name": "routeRequest",
+    "explanation": "Matches the request method and path to the right handler: the page, the poll list, creating a poll, or voting. Unknown routes get a 404.",
+    "hash": "c8f3c85adcb88dfd1bd17b1492f0b7488ccdbdfc9338b4ac96a1661d972cf753"
+  },
+  {
+    "file": "app/server.mjs",
+    "name": "runExclusive",
+    "explanation": "Runs one data task after the task before it finishes, so two writes never overlap. It returns the result of the task, or its error.",
+    "hash": "ebe27bb9fa74cebc85351b6092637c761205086219e1390f9c16dc36944c3f6f"
+  },
+  {
+    "file": "app/server.mjs",
+    "name": "runTask",
+    "explanation": "Runs the queued data task once the task before it has finished.",
+    "hash": "b1057d02917fbfebcaee0b125cbbf9d1b3be778ae978d06455afd38867955653"
+  },
+  {
+    "file": "app/server.mjs",
+    "name": "sendJson",
+    "explanation": "Sends a JSON response with the given status code and a correct content length.",
+    "hash": "8e73247b954394a5c8116c3bf513cb5114562f3cad41061a290332e788fa1c94"
+  },
+  {
+    "file": "app/server.mjs",
+    "name": "sendPolls",
+    "explanation": "Reads the poll list from the data file and sends it to the browser in the public shape.",
+    "hash": "29617ba1dbc5365f4f5d5ef24eb383a020a9519085c2ddff4d3da15278a741b3"
+  },
+  {
+    "file": "app/server.mjs",
+    "name": "sendStatic",
+    "explanation": "Sends one file from the public folder with its content type and a no-store cache header.",
+    "hash": "830f83c74a3cb8f659562fdd16a11ddef9132242ce909fe20fb189f0de876e8d"
+  },
+  {
+    "file": "app/server.mjs",
+    "name": "serveRequest",
+    "explanation": "Routes one request and turns any error into a response. Known errors send their own status code, and anything else becomes a 500 that the server logs.",
+    "hash": "d5083b3cce1001a32beafbf046e6b6887de3c2aa0908e5038b23c361971e1d47"
+  },
+  {
+    "file": "app/server.mjs",
+    "name": "startFromEnvironment",
+    "explanation": "Reads PORT and DATA_FILE from the environment, starts the server, and stops it cleanly on SIGTERM or SIGINT.",
+    "hash": "2276ecc93b5a604aa7be5588f7ddfd780d3510c4c53488860e782f318cb9536c"
+  },
+  {
+    "file": "app/server.mjs",
+    "name": "stopOnSignal",
+    "explanation": "Closes the server when the process gets SIGTERM or SIGINT, so the process exits cleanly with code 0.",
+    "hash": "70874f171af4165fc7f91ecaf6ffc18e02ec009d1e9815da2abd19757a510500"
+  },
+  {
+    "file": "app/server.mjs",
+    "name": "votePollRoute",
+    "explanation": "Reads the chosen option from the request body and records the vote. It answers 200 with the updated poll, or the matching error status for an unknown poll, a bad option, or a repeat vote.",
+    "hash": "129481ee5b5829243ec7015b5b16a4610ebca1a2a5060d456e491af22314cb6b"
+  },
+  {
+    "file": "app/store.mjs",
+    "name": "addVotes",
+    "explanation": "Adds the votes of one option to a running total. It counts all votes in a poll.",
+    "hash": "ad4efa1a465680500c9972c522c31f520dcddb590128bebd4a0296b99b26c8ce"
+  },
+  {
+    "file": "app/store.mjs",
+    "name": "castVote",
+    "explanation": "Records one vote for an option in a poll. It refuses an unknown poll, an option that does not exist, and a second vote from the same voter.",
+    "hash": "ccc0fd37c2f5a4178a081707333a24a5e083f5f0062635e8422698f759a719f4"
+  },
+  {
+    "file": "app/store.mjs",
+    "name": "cleanOption",
+    "explanation": "Cleans one option label using the option length limit.",
+    "hash": "6e5c2be2cdf27a4df3d0af465abd21a7ba5c4b0a8c20b17ac7bc5ebe74240677"
+  },
+  {
+    "file": "app/store.mjs",
+    "name": "cleanOptions",
+    "explanation": "Checks that the options are a list of two to ten valid option labels, and returns them cleaned.",
+    "hash": "c8312610a2fa719c51f3fcd7e65b7a4f4e1aa87fc5c6099b619ef7bb1580c829"
+  },
+  {
+    "file": "app/store.mjs",
+    "name": "cleanText",
+    "explanation": "Trims a text value and rejects it when it is missing, empty, not text, or longer than the limit.",
+    "hash": "e04fd4d7ff08d468d5e54d52c446ea968e30a7776837f78949a4c61f77d68ae1"
+  },
+  {
+    "file": "app/store.mjs",
+    "name": "copyTally",
+    "explanation": "Copies one option tally so that callers cannot change the stored poll.",
+    "hash": "0cfbb76600a1052289387fb9d547c7910c6fb03cabab431b38d73ae37607d6ff"
+  },
+  {
+    "file": "app/store.mjs",
+    "name": "createPoll",
+    "explanation": "Checks the question and options, adds a new poll with zero votes to the list, and returns it. It throws a validation error when the input is not usable.",
+    "hash": "caa99d42600bb053a35d345892b7801328b4c2e8353bd6a279775f673d85e550"
+  },
+  {
+    "file": "app/store.mjs",
+    "name": "findPoll",
+    "explanation": "Returns the poll with the given id from the list, or null when no poll has that id.",
+    "hash": "5c42388d4f7642ebe6e96d9ef22ea8eedfa2d0ef8c6df0aad264e6169353bd83"
+  },
+  {
+    "file": "app/store.mjs",
+    "name": "invalid",
+    "explanation": "Builds a validation error with the given message and the name ValidationError, so the server can answer with a 400 response.",
+    "hash": "baa4be796308fb3c4161f7c44bdee314e81fe0016fc25b42ce350bea1c12a15f"
+  },
+  {
+    "file": "app/store.mjs",
+    "name": "listPolls",
+    "explanation": "Returns every poll in a form safe to send to the browser, without voter ids.",
+    "hash": "02fd8890cd9d5c849d4978e7f3bd3e7da14f65106d615e7f4c9664f35cf8baef"
+  },
+  {
+    "file": "app/store.mjs",
+    "name": "loadPolls",
+    "explanation": "Reads the poll list from the JSON data file. A missing file counts as an empty list, and a file that does not hold a list is an error.",
+    "hash": "2e91411783f35e4b2bd26b96ac3212817d57c1651412d0cbd1cc5947b44a6fe0"
+  },
+  {
+    "file": "app/store.mjs",
+    "name": "publicPoll",
+    "explanation": "Copies one poll into the public shape: id, question, option tallies, total votes, and the creation time.",
+    "hash": "a5303784f8e8bc27dd895c356c4c6877f28333420e76c64ac1aa79dad9d5d6cf"
+  },
+  {
+    "file": "app/store.mjs",
+    "name": "savePolls",
+    "explanation": "Writes the poll list to the data file. It writes a temporary file first and then renames it, so a crash cannot leave a half-written file.",
+    "hash": "3f93b5f8a53bb474a409f3304c917107d3a9fd43ace3b646d70ef4af984d3666"
+  },
+  {
+    "file": "app/store.mjs",
+    "name": "startTally",
+    "explanation": "Turns one option label into a tally with zero votes.",
+    "hash": "c9034491df2b0aed0f84dab0c6f2e30b28a4e26cb6e5745263a835d1743673ac"
+  }
+]
