@@ -64,31 +64,79 @@ export async function nextRaceNumber(root) {
   return numbers.length === 0 ? 1 : Math.max(...numbers) + 1;
 }
 
-// Runs a command with its output in logFile. A timeout sends SIGTERM and sets timedOut.
-export function runProcess({ command, args, cwd, logFile, timeoutMs = null }) {
-  return new Promise((resolve) => {
+// A child leads its own process group, so a stop reaches everything the child started.
+const KILL_GRACE_MS = 10 * 1000;
+// After a child exits, its output may still be open in a process that left the group.
+const SETTLE_MS = 2 * 1000;
+
+// Runs a command with its output in logFile. A timeout stops it and sets timedOut. A SIGINT or
+// SIGTERM to this process stops it too, and the promise rejects. A stop sends SIGTERM to the
+// group, then SIGKILL after killGraceMs.
+export function runProcess({ command, args, cwd, logFile, timeoutMs = null, killGraceMs = KILL_GRACE_MS }) {
+  return new Promise((resolve, reject) => {
     const output = createWriteStream(logFile);
-    const child = spawn(command, args, { cwd, stdio: ["ignore", "pipe", "pipe"] });
+    const child = spawn(command, args, { cwd, detached: true, stdio: ["ignore", "pipe", "pipe"] });
     let timedOut = false;
+    let interruptedBy = null;
     let done = false;
+    let killTimer = null;
+    let settleTimer = null;
+    const stopGroup = () => {
+      signalGroup(child.pid, "SIGTERM");
+      if (killTimer === null) killTimer = setTimeout(() => signalGroup(child.pid, "SIGKILL"), killGraceMs);
+    };
+    const onInterrupt = (signal) => {
+      interruptedBy = signal;
+      stopGroup();
+    };
     const timer =
       timeoutMs === null
         ? null
         : setTimeout(() => {
             timedOut = true;
-            child.kill("SIGTERM");
+            stopGroup();
           }, timeoutMs);
+    process.on("SIGINT", onInterrupt);
+    process.on("SIGTERM", onInterrupt);
     child.stdout.pipe(output, { end: false });
     child.stderr.pipe(output, { end: false });
     const finish = (result) => {
       if (done) return;
       done = true;
       clearTimeout(timer);
-      output.end(() => resolve({ ...result, timedOut }));
+      clearTimeout(killTimer);
+      clearTimeout(settleTimer);
+      process.off("SIGINT", onInterrupt);
+      process.off("SIGTERM", onInterrupt);
+      output.end(() => {
+        if (interruptedBy === null) resolve({ ...result, timedOut });
+        else reject(new Error(`interrupted by ${interruptedBy}`));
+      });
     };
     child.on("error", (error) => finish({ code: null, signal: null, error: error.message }));
+    child.on("exit", (code, signal) => {
+      if (done) return;
+      clearTimeout(timer);
+      // Anything the child left running in its group is stopped, so nothing holds the output open.
+      signalGroup(child.pid, "SIGKILL");
+      settleTimer = setTimeout(() => {
+        child.stdout.destroy();
+        child.stderr.destroy();
+        finish({ code, signal, error: null });
+      }, SETTLE_MS);
+    });
     child.on("close", (code, signal) => finish({ code, signal, error: null }));
   });
+}
+
+// Signals a child's process group. The group may already be gone.
+function signalGroup(pid, signal) {
+  if (pid === undefined) return;
+  try {
+    process.kill(-pid, signal);
+  } catch {
+    // Nothing is left in the group.
+  }
 }
 
 export async function readJsonOrNull(file) {
