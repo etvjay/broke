@@ -71,21 +71,21 @@ The drift check fails when:
 | 0004 | f2df2c2 | A poll whose options repeat is refused | pass | 75.92 |
 | 0005 | 7cdb160 | The newest poll is listed first | pass | 100.71 |
 
-Reports 0003 to 0005 each test an app change that the builder agent made. None was planted to fail. No run has gone red, so the race has not run on a real red, and no pick has run. The race is tested with fake racers and a fake verify. No real racer has run, so the 20-minute limit and a racer's cost are untested.
+Reports 0003 to 0005 each test an app change that the builder agent made. None was planted to fail. No run has gone red, so the race has not run on a real red, and no pick has run. The race is tested with fake racers and a fake verify. One Droid racer has run once, on a one-line test change, through the same process code. The 20-minute limit and a racer's cost on a real fix are untested.
 
 ## The Stop hook and the race
 
 After an agent turn that changes `app/` or `explain/`, the Stop hook (`.factory/hooks.json`) runs verify. A green run ends the turn. A red run that a race can fix starts a race in the background. A race can fix an app fault that Kane's verdict places in the app, or a drift problem that the code or an explanation can fix. Other reds stop for the owner: a function that no flow ran, a fault Kane places in the flow itself, and Kane errors such as a crash, a timeout, a login problem, or low credits.
 
-1. The runner creates the worktrees `race/NNNN-a`, `race/NNNN-b`, and `race/NNNN-c` from the red commit. It runs one Droid racer at a time, a, then b, then c. Each racer gets the failing report and Kane's verdict, and has 20 minutes.
+1. The runner creates the worktrees `race/NNNN-a`, `race/NNNN-b`, and `race/NNNN-c` from the red commit. It runs one Droid racer at a time, a, then b, then c. Each racer gets the failing report and Kane's verdict, and has 20 minutes. At 20 minutes the runner stops the racer: SIGTERM to its process group, then SIGKILL 10 seconds later. A racer stopped for time fails as racer timed out, and its commit is not verified. Processes a racer leaves behind are stopped when it exits.
 2. Each racer changes only `app/` and `explain/`, and commits its fix.
 3. As soon as a racer exits, the runner verifies its attempt with the same flows and drift check. The next racer starts after that verify ends.
 4. The runner writes `comparison.md`. It lists each attempt's verdicts, drift result, and changed lines. It names no winner.
 5. The owner picks a green attempt: `npm run race:pick -- NNNN a --reason "<why>"`. The runner merges it and verifies the merged code. If that verify is green, main gets the merge, Kane's report on it, and a pick record with the verdict. Otherwise main stays where it was, and the merge, its report, and the record stay on branch `pick/NNNN-<letter>`.
 
-If no attempt is green, nothing merges. The records go to branch `race/NNNN-report`, and the race lock clears so the owner can decide the next step. A green race puts its records on the same branch while it waits for the pick. A race runs three attempt verifies, about 230 to 310 Kane credits in total. The owner's pick runs one more verify, about 76 to 104.
+If no attempt is green, nothing merges. The records go to branch `race/NNNN-report`, and the race lock clears so the owner can decide the next step. A green race puts its records on the same branch while it waits for the pick. A race runs three attempt verifies, about 230 to 310 Kane credits in total. The owner's pick runs one more verify, about 76 to 104. Droid racers bill Factory credits, a separate budget from Kane credits. One racer on a one-line test change used 54,841 Factory credits. A racer on a real fix is not measured yet.
 
-If a race stops before it finishes, for example when the machine restarts, its lock goes stale. The next red clears the lock and starts a new race. To close a stopped race by hand, run `npm run race:close -- NNNN`.
+If a race stops before it finishes, for example when the machine restarts, its lock goes stale. The next red clears the lock and starts a new race. A lock is stale when the process that holds it has exited. A process id can be reused, so after a restart a lock can look live. Then delete `~/.why-it-broke/race.lock` by hand. Ctrl-C, or a SIGTERM to the race, stops a running racer or attempt verify, and the race then releases its lock. To close a stopped race by hand, run `npm run race:close -- NNNN`.
 
 ## Owner commands
 
