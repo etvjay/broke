@@ -14,6 +14,7 @@ import { explanationChanges, renderComparison } from "../scripts/lib/compare.mjs
 import { acquireLock, lockPath, raceDir, readLock, releaseLock, stateDir } from "../scripts/lib/lock.mjs";
 import { addWorktree, worktreePath } from "../scripts/lib/race-support.mjs";
 import { classifyRed } from "../scripts/lib/summary.mjs";
+import { TEST_EMAIL, TEST_NAME } from "./support/identity.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(HERE, "..");
@@ -69,8 +70,8 @@ async function setup({ family = "app_bug", extraCommit = false } = {}) {
   const repo = join(dir, "kane");
   await mkdir(repo);
   git(repo, ["init", "-q", "-b", "main"]);
-  git(repo, ["config", "user.name", git(ROOT, ["config", "--get", "user.name"]).trim()]);
-  git(repo, ["config", "user.email", git(ROOT, ["config", "--get", "user.email"]).trim()]);
+  git(repo, ["config", "user.name", TEST_NAME]);
+  git(repo, ["config", "user.email", TEST_EMAIL]);
   await mkdir(join(repo, "app"));
   await writeFile(join(repo, "app", "store.mjs"), "export function make() {\n  return 1;\n}\n");
   await mkdir(join(repo, "flows"));
@@ -164,8 +165,8 @@ test("a linked node_modules does not make a racer's worktree look dirty", async 
   const repo = join(dir, "kane");
   await mkdir(repo);
   git(repo, ["init", "-q", "-b", "main"]);
-  git(repo, ["config", "user.name", git(ROOT, ["config", "--get", "user.name"]).trim()]);
-  git(repo, ["config", "user.email", git(ROOT, ["config", "--get", "user.email"]).trim()]);
+  git(repo, ["config", "user.name", TEST_NAME]);
+  git(repo, ["config", "user.email", TEST_EMAIL]);
   await writeFile(join(repo, ".gitignore"), await readFile(join(ROOT, ".gitignore"), "utf8"));
   await writeFile(join(repo, "README.md"), "base\n");
   await mkdir(join(repo, "node_modules"));
@@ -404,8 +405,8 @@ test("the race CLI runs on the repo named by --root", async () => {
   const repo = join(dir, "kane");
   await mkdir(join(repo, "reports"), { recursive: true });
   git(repo, ["init", "-q", "-b", "main"]);
-  git(repo, ["config", "user.name", git(ROOT, ["config", "--get", "user.name"]).trim()]);
-  git(repo, ["config", "user.email", git(ROOT, ["config", "--get", "user.email"]).trim()]);
+  git(repo, ["config", "user.name", TEST_NAME]);
+  git(repo, ["config", "user.email", TEST_EMAIL]);
   await writeFile(join(repo, "reports", "0007.md"), "# report 0007\n");
   git(repo, ["add", "-A"]);
   git(repo, ["commit", "-q", "-m", "report: 0007"]);

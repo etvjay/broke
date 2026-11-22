@@ -7,6 +7,7 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { acquireLock } from "../scripts/lib/lock.mjs";
+import { TEST_EMAIL, TEST_NAME } from "./support/identity.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(HERE, "..");
@@ -34,8 +35,8 @@ async function setup({ withReport = true } = {}) {
   const repo = join(dir, "kane");
   await mkdir(repo);
   git(repo, ["init", "-q", "-b", "main"]);
-  git(repo, ["config", "user.name", git(ROOT, ["config", "--get", "user.name"]).trim()]);
-  git(repo, ["config", "user.email", git(ROOT, ["config", "--get", "user.email"]).trim()]);
+  git(repo, ["config", "user.name", TEST_NAME]);
+  git(repo, ["config", "user.email", TEST_EMAIL]);
   await mkdir(join(repo, "app"));
   await writeFile(join(repo, "app", "fix.txt"), "start\n");
   await mkdir(join(repo, "explain"));

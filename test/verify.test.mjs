@@ -12,6 +12,7 @@ import { sha256File } from "../scripts/lib/hash.mjs";
 import { classifyRun } from "../scripts/lib/kane.mjs";
 import { runVerify } from "../scripts/verify.mjs";
 import { PACK_ENTRIES, zipEntries } from "./fixtures/evidence-pack.mjs";
+import { TEST_EMAIL, TEST_NAME } from "./support/identity.mjs";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const FAKE_KANE = join(ROOT, "test", "fixtures", "fake-kane.mjs");
@@ -40,8 +41,8 @@ async function makeRepo({ approved = true, brokenApp = false, ignoreSigterm = fa
   await writeFile(join(root, ".gitignore"), "node_modules/\n");
   await symlink(join(ROOT, "node_modules"), join(root, "node_modules"), "dir");
   await git(root, ["init", "-q", "-b", "main"]);
-  await git(root, ["config", "user.name", (await git(ROOT, ["config", "--get", "user.name"])).trim()]);
-  await git(root, ["config", "user.email", (await git(ROOT, ["config", "--get", "user.email"])).trim()]);
+  await git(root, ["config", "user.name", TEST_NAME]);
+  await git(root, ["config", "user.email", TEST_EMAIL]);
   const approvals = {};
   for (const flow of FLOWS) approvals[`${flow}.md`] = await sha256File(join(root, "flows", `${flow}.md`));
   if (!approved) approvals["poll-vote.md"] = "0".repeat(64);
