@@ -1,4 +1,4 @@
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -78,22 +78,19 @@ export async function runPick({ root = ROOT, number, letter, reason, verifyScrip
       "-m", `Owner reason: ${reason.trim()}`,
       "-m", COAUTHOR
     ]);
-    // Attempt mode: the merged tree's report and summary stay in the race folder,
-    // so the pick adds no report commit to main.
-    const pickOut = join(dir, "pick");
-    await rm(pickOut, { recursive: true, force: true });
+    // The merge is the commit verify tests. Verify then commits its report on top of it, as
+    // the Stop hook's verify does, so main's newest report names the merge it tested.
     const verify = await runProcess({
       command: process.execPath,
-      args: [verifyScript, "--root", scratch, "--attempt-out", pickOut, "--label", `race ${n} pick of attempt ${letter}`],
+      args: [verifyScript, "--root", scratch],
       cwd: scratch,
       logFile: join(dir, "pick-verify.log")
     });
     const verified = verify.code === 0 ? "verified green" : verify.code === 1 ? "verified red" : "did not verify";
-    const result = `${note}\nThe merged result ${verified} (exit ${verify.code}). ${verify.code === 0 ? "Main moves to this commit." : "Main did not move. The race keeps the lock."}\n`;
-    await writeFile(join(scratch, records, "pick.md"), result);
-    await writeFile(join(dir, "pick.md"), result);
-    await git(scratch, ["add", "--", records]);
-    await git(scratch, ["commit", "-q", "--amend", "--no-edit"]);
+    await writeFile(
+      join(dir, "pick.md"),
+      `${note}\nThe merged result ${verified} (exit ${verify.code}). ${verify.code === 0 ? "Main moves to this commit." : "Main did not move. The race keeps the lock."}\n`
+    );
     if (verify.code === 0) {
       await git(root, ["merge", "--ff-only", pickBranch]);
       const merged = (await git(root, ["rev-parse", "HEAD"])).trim();

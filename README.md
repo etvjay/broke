@@ -68,7 +68,7 @@ After an agent turn that changes `app/` or `explain/`, the Stop hook (`.factory/
 2. Each racer changes only `app/` and `explain/`, and commits its fix.
 3. The runner verifies each attempt in turn, with the same flows and drift check.
 4. The runner writes `comparison.md`. It lists each attempt's verdicts, drift result, and changed lines. It names no winner.
-5. The owner picks a green attempt: `npm run race:pick -- NNNN a --reason "<why>"`. The runner merges it into main only if the merged code verifies green. Otherwise main stays where it was.
+5. The owner picks a green attempt: `npm run race:pick -- NNNN a --reason "<why>"`. The runner merges it, then verifies the merged code. If that verify is green, the merge and its report reach main together. Otherwise main stays where it was.
 
 If no attempt is green, nothing merges. The records stay on branch `race/NNNN-report`, and the race lock clears so the owner can decide the next step. A race costs about three verifies' worth of Kane credits.
 

@@ -230,7 +230,7 @@ test("pick refuses a red attempt and leaves main and the lock alone", async () =
   await releaseLock();
 });
 
-test("pick of a green attempt moves main to the merge, clears the lock, and keeps the branches", async () => {
+test("pick of a green attempt merges into main, clears the lock, and keeps the branches", async () => {
   const ctx = await setup();
   await startRace(ctx, { a: "none", b: "green", c: "red" });
   const before = git(ctx.repo, ["rev-parse", "HEAD"]).trim();
@@ -238,7 +238,8 @@ test("pick of a green attempt moves main to the merge, clears the lock, and keep
   assert.equal(await pick(ctx, "b", "only green attempt"), 0);
   const head = git(ctx.repo, ["rev-parse", "HEAD"]).trim();
   assert.notEqual(head, before);
-  assert.equal(git(ctx.repo, ["log", "-1", "--format=%P", head]).trim().split(" ").length, 2);
+  const merge = git(ctx.repo, ["rev-parse", "HEAD^"]).trim();
+  assert.equal(git(ctx.repo, ["log", "-1", "--format=%P", merge]).trim().split(" ").length, 2);
   assert.equal(isAncestor(ctx.repo, attemptCommit, head), true);
   assert.equal(await readLock(), null);
   assert.equal(existsSync(join(ctx.dir, "why-it-broke-race-0001-b")), false);
@@ -247,7 +248,17 @@ test("pick of a green attempt moves main to the merge, clears the lock, and keep
   assert.match(git(ctx.repo, ["show", "HEAD:reports/races/0001/pick.md"]), /only green attempt/);
   assert.match(git(ctx.repo, ["show", "HEAD:reports/races/0001/brief.md"]), /# Fix the app/);
   assert.match(git(ctx.repo, ["show", "HEAD:reports/races/0001/attempts.json"]), /"letter": "b"/);
-  assert.match(git(ctx.repo, ["show", "HEAD:reports/races/0001/pick.md"]), /verified green/);
+  assert.match(git(ctx.repo, ["show", "HEAD:reports/races/0001/pick.md"]), /only green attempt/);
+});
+
+test("a pick commits the merged result's Kane report to main, tested at the merge commit", async () => {
+  const ctx = await setup();
+  await startRace(ctx, { a: "none", b: "green", c: "red" });
+  assert.equal(await pick(ctx, "b", "only green attempt"), 0);
+  const merge = git(ctx.repo, ["rev-parse", "HEAD^"]).trim();
+  assert.match(git(ctx.repo, ["show", "HEAD:reports/0002.md"]), new RegExp(`^Tested commit: ${merge}$`, "m"));
+  assert.match(git(ctx.repo, ["show", "HEAD:reports/0002.json"]), /"outcome": "pass"/);
+  assert.match(git(ctx.repo, ["log", "-1", "--format=%B"]), new RegExp(`Tested commit: ${merge}`));
 });
 
 test("a pick whose merged result verifies red leaves main alone and keeps the lock", async () => {
@@ -263,6 +274,7 @@ test("a pick whose merged result verifies red leaves main alone and keeps the lo
   assert.equal(git(ctx.repo, ["rev-parse", "HEAD"]).trim(), before);
   assert.equal((await readLock()).state, "awaiting-pick");
   assert.notEqual(git(ctx.repo, ["branch", "--list", "pick/0001-a"]).trim(), "");
+  assert.match(git(ctx.repo, ["show", "pick/0001-a:reports/0002.md"]), /fake report 0002/);
   assert.match(await readFile(join(raceDir(1), "pick.md"), "utf8"), /Main did not move/);
   await releaseLock();
 });
