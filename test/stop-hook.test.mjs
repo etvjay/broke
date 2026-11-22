@@ -210,6 +210,19 @@ test("a commit that changes only docs does not run verify", async () => {
   assert.equal(git(ctx.repo, ["rev-parse", "HEAD"]).trim(), before);
 });
 
+test("after a green pick, the newest report tests HEAD's app code, so the hook does not verify again", async () => {
+  const ctx = await setup();
+  await changeApp(ctx.repo, "green\n");
+  commit(ctx.repo, "fix: vote");
+  const tested = git(ctx.repo, ["rev-parse", "HEAD"]).trim();
+  await writeFile(join(ctx.repo, "reports", "0002.md"), `# report 0002\n\nTested commit: ${tested}\n`);
+  await writeFile(join(ctx.repo, "reports", "0002.json"), `${JSON.stringify({ number: 2, testedCommit: tested, outcome: "pass", flows: [], drift: { ok: true, skipped: false, problems: [] } }, null, 2)}\n`);
+  commit(ctx.repo, "report: 0002 pick report");
+  const r = runHook({ repo: ctx.repo, home: ctx.home });
+  assert.equal(r.code, 0, r.stderr);
+  assert.match(r.stdout, /No change under app\/ or explain\/ since report 0002/);
+});
+
 test("a verified HEAD with nothing new does nothing", async () => {
   const ctx = await setup();
   const r = runHook({ repo: ctx.repo, home: ctx.home });
