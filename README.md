@@ -76,7 +76,7 @@ The drift check fails when:
 
 Reports 0003 to 0008 each test an app change that the builder agent made, with a failing test or browser check written first. None was planted to fail. Reports 0006 to 0008 were the last three tries the owner allowed, and all three passed. No run has gone red, so the race has not run on a real red, and no pick has run. The race is tested with fake racers and a fake verify. One Droid racer has run once, on a one-line test change, through the same process code. The 20-minute limit and a racer's cost on a real fix are untested.
 
-The Kane balance fell by 776 credits between the balance recorded after report 0001 and the one after report 0008. Reports 0002 to 0008, and one stray run that was never committed (about 81 credits by its visible records), account for about 693 of that. The other 83 credits have no known cause.
+The Kane balance fell by 776.26 credits between the balance recorded after report 0001 and the one after report 0008. Kane's session records account for 695.39 of that: the 21 runs behind reports 0002 to 0008, plus three runs from one stray run that was never committed. The stray run cost 82.56 credits. That leaves 80.87 credits with no known cause.
 
 Git history keeps some data from the first run. Commit `b560bb5`, which commits report 0001, contains three LambdaTest share links, the account name, and the organization and user IDs. Commits `091d665` and `910cc99` removed them from the tracked files, but the history was kept, so each report's tested commit still exists. Kane share links expire seven days after they are made, so the three report 0001 links should expire around 29 November 2026.
 
