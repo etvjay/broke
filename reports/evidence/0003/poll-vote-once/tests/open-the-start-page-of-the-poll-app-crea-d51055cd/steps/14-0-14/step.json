@@ -1,0 +1,14 @@
+{
+  "kind": "analyze",
+  "status": "passed",
+  "summary": "analyze: ANALYZE(visual, 'the poll still shows \"Black (0)\", so the second vote did not co",
+  "duration_ms": 20429.6,
+  "url": "http://localhost:41157/",
+  "action_id": "88bc8b11-cbdc-4e6c-933a-efcbb10bb2cf",
+  "analyze_action_ids": [
+    "4746be37-2e63-4fba-ae81-86b0f8661e52",
+    "88bc8b11-cbdc-4e6c-933a-efcbb10bb2cf"
+  ],
+  "ordinal": 14,
+  "id": "0-14"
+}

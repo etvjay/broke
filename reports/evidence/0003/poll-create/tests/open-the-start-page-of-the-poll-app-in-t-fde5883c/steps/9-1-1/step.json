@@ -1,0 +1,16 @@
+{
+  "kind": "type",
+  "status": "passed",
+  "summary": "type: Typing Only one? into the poll question field",
+  "duration_ms": 5480.4,
+  "url": "http://localhost:44635/",
+  "action_id": "3d970b88-61c9-4f8b-b1b5-0cab6523d27f",
+  "element_rect": {
+    "x": 667,
+    "y": 137,
+    "width": 586,
+    "height": 19
+  },
+  "ordinal": 9,
+  "id": "1-1"
+}

@@ -1,0 +1,10 @@
+{
+  "kind": "assert",
+  "status": "passed",
+  "summary": "assert: the poll \"Favourite colour?\" appears in the list with \"Blue (0)\".",
+  "duration_ms": 6.2,
+  "url": "http://localhost:35993/",
+  "action_id": "e3932925-c613-4d6d-a8e8-23750397682e",
+  "ordinal": 11,
+  "id": "0-11"
+}

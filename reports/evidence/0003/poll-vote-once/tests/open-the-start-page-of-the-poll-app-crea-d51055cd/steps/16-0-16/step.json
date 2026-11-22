@@ -1,0 +1,10 @@
+{
+  "kind": "assert",
+  "status": "passed",
+  "summary": "assert: the poll still shows \"Black (0)\", so the second vote did not count.",
+  "duration_ms": 6.4,
+  "url": "http://localhost:41157/",
+  "action_id": "acc762bc-89bb-49a8-a0f1-fb0801a46ba5",
+  "ordinal": 16,
+  "id": "0-16"
+}

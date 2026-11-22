@@ -1,0 +1,114 @@
+{
+  "run_id": "run",
+  "test_id": "test",
+  "objective": "Open the start page of the poll app.\nIn the Question box, type: Lunch spot?\nIn the Options box, type Noodles on one line and Tacos on the next line.\nClick the Create poll button.\nCheck that the message \"Poll created.\" appears under the form.\nCheck that a poll with the question \"Lunch spot?\" appears in the list.\nCheck that the poll shows the options \"Noodles (0)\" and \"Tacos (0)\".",
+  "start_url": "about:blank",
+  "start_time": "2026-11-22T13:43:06.206090+00:00",
+  "config": {
+    "reasoning_provider": "testmuai",
+    "reasoning_model": "v16-alpha",
+    "vision_provider": "testmuai",
+    "vision_model": "v16-alpha",
+    "screen_width": 1920,
+    "screen_height": 1080,
+    "max_steps": 50
+  },
+  "credits_consumed": 16.669195000000002,
+  "steps": [
+    {
+      "step": 1,
+      "duration_ms": 2.8,
+      "url": "http://localhost:44635/",
+      "status": "continue",
+      "step_file": "step_001.json",
+      "action_type": "navigate",
+      "action_target": "Navigate to http://localhost:44635",
+      "success": true,
+      "method": "action"
+    },
+    {
+      "step": 2,
+      "duration_ms": 7262.4,
+      "url": "http://localhost:44635/",
+      "status": "continue",
+      "step_file": "step_002.json",
+      "action_type": "type",
+      "action_target": "Typing Lunch spot? into the poll question field",
+      "success": true,
+      "method": "dom_action"
+    },
+    {
+      "step": 3,
+      "duration_ms": 5349.7,
+      "url": "http://localhost:44635/",
+      "status": "continue",
+      "step_file": "step_003.json",
+      "action_type": "type",
+      "action_target": "Typing Noodles and Tacos into poll options field",
+      "success": true,
+      "method": "dom_action"
+    },
+    {
+      "step": 4,
+      "duration_ms": 5045.1,
+      "url": "http://localhost:44635/",
+      "status": "continue",
+      "step_file": "step_004.json",
+      "action_type": "click",
+      "action_target": "Clicking Create poll button",
+      "success": true,
+      "method": "dom_action"
+    },
+    {
+      "step": 5,
+      "duration_ms": 13096.8,
+      "url": "http://localhost:44635/",
+      "status": "continue",
+      "step_file": "step_005.json",
+      "action_type": "analyze",
+      "action_target": "ANALYZE(textual_visual, 'the poll shows the option \"Tacos (0)\".', key='tacos_zer",
+      "success": true,
+      "method": "action"
+    },
+    {
+      "step": 6,
+      "duration_ms": 7.6,
+      "url": "http://localhost:44635/",
+      "status": "passed",
+      "step_file": "step_006.json",
+      "action_type": "assert",
+      "action_target": "the message \"Poll created.\" appears under the form.",
+      "success": true,
+      "method": "assertion"
+    },
+    {
+      "step": 7,
+      "duration_ms": 7.7,
+      "url": "http://localhost:44635/",
+      "status": "passed",
+      "step_file": "step_007.json",
+      "action_type": "assert",
+      "action_target": "a poll with the question \"Lunch spot?\" appears in the list.",
+      "success": true,
+      "method": "assertion"
+    },
+    {
+      "step": 8,
+      "duration_ms": 4.5,
+      "url": "http://localhost:44635/",
+      "status": "passed",
+      "step_file": "step_008.json",
+      "action_type": "assert",
+      "action_target": "the poll shows the options \"Noodles (0)\" and \"Tacos (0)\".",
+      "success": true,
+      "method": "assertion"
+    }
+  ],
+  "errors": [],
+  "end_time": "2026-11-22T13:43:48.290288+00:00",
+  "total_duration_ms": 0,
+  "final_status": "complete",
+  "final_url": "http://localhost:44635/",
+  "total_steps": 8,
+  "reason": "Objective completed"
+}

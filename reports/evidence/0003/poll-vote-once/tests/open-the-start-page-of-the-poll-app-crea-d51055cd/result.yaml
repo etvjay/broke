@@ -1,0 +1,118 @@
+evidence: '0.1'
+test: open-the-start-page-of-the-poll-app-crea-d51055cd
+status: passed
+duration_ms: 90095
+external_id:
+  session_id: a0af547d-333e-4efe-97e2-737615a3e7c7
+  commit_id: a0af547d-333e-4efe-97e2-737615a3e7c7
+  test_id: 91148d8c-6dc4-4a80-9fb1-828c7c1e5172
+  testcase_id: 01M81R393KMTR0E94ZKFC9Y18F
+  project_id: 01M0HVQ571X8ARVW8V01B9FXH5
+  folder_id: 01M0J0NKJF28RDJD0J364SHW7G
+  org_id: '<account-id>'
+  user_name: <account>
+  user_email: <email>
+  sharable_link: https://test-manager.lambdatest.com/projects/01M0HVQ571X8ARVW8V01B9FXH5/test-cases/01M81R393KMTR0E94ZKFC9Y18F/dashboard/share/<share-token>?type=summary&agentView=true&fqdn=summary-page
+  execution_id: 238cb072-3a68-4fd2-97f6-c415f736808f
+environment:
+  model: v16-alpha
+  os: Linux
+  browser: Chrome
+  browser_version: '157'
+  resolution: 1920x1080
+  platform: Desktop
+  platform_type: web
+  os_version: 7.0.0-1011-aws
+steps:
+  - id: 0-1
+    ordinal: 1
+    status: passed
+    kind: navigate
+    duration_ms: 0
+    action_id: c4e44240-7f70-4b11-9cfc-732f30ea0885
+  - id: 0-2
+    ordinal: 2
+    status: passed
+    kind: wait
+    duration_ms: 4800
+    action_id: 859a32bb-3cb9-4fac-bc21-a809f3377d75
+  - id: 0-3
+    ordinal: 3
+    status: passed
+    kind: wait
+    duration_ms: 5000
+    action_id: 3c640985-a61b-444a-b465-76cedea5a74a
+  - id: 0-4
+    ordinal: 4
+    status: passed
+    kind: type
+    duration_ms: 100
+    action_id: d350dc55-ef14-48bc-90a1-f519e9fc3189
+  - id: 0-5
+    ordinal: 5
+    status: passed
+    duration_ms: 400
+  - id: 0-6
+    ordinal: 6
+    status: passed
+    kind: wait
+    duration_ms: 3700
+    action_id: ed24624d-c920-4570-85a5-c75e784d6a23
+  - id: 0-7
+    ordinal: 7
+    status: passed
+    kind: type
+    duration_ms: 100
+    action_id: 7f89c519-8055-4011-adfe-4724be087417
+  - id: 0-8
+    ordinal: 8
+    status: passed
+    duration_ms: 300
+  - id: 0-9
+    ordinal: 9
+    status: passed
+    kind: click
+    duration_ms: 3000
+    action_id: 80e3c21f-693e-4d83-a6bd-27410b69dc95
+  - id: 0-10
+    ordinal: 10
+    status: passed
+    kind: click
+    duration_ms: 11300
+    action_id: 31ac3358-9c76-4192-8230-152166063ec7
+  - id: 0-11
+    ordinal: 11
+    status: passed
+    kind: analyze
+    duration_ms: 8100
+    action_id: 66169106-ede4-4e6b-82f7-ad3c83046ea8
+  - id: 0-12
+    ordinal: 12
+    status: passed
+    kind: assert
+    duration_ms: 0
+    action_id: 5a7647d9-5950-4c53-b95e-f260c1d6dfe8
+  - id: 0-13
+    ordinal: 13
+    status: passed
+    kind: click
+    duration_ms: 5200
+    action_id: af115601-d860-419b-b379-7265ab19588b
+  - id: 0-14
+    ordinal: 14
+    status: passed
+    kind: analyze
+    duration_ms: 20400
+    action_id: 88bc8b11-cbdc-4e6c-933a-efcbb10bb2cf
+  - id: 0-15
+    ordinal: 15
+    status: passed
+    kind: assert
+    duration_ms: 0
+    action_id: bd70417a-f838-4226-a472-f9ca18211988
+  - id: 0-16
+    ordinal: 16
+    status: passed
+    kind: assert
+    duration_ms: 0
+    action_id: acc762bc-89bb-49a8-a0f1-fb0801a46ba5
