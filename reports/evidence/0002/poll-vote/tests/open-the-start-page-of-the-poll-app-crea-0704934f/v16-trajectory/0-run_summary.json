@@ -1,0 +1,110 @@
+{
+  "run_id": "run",
+  "test_id": "test",
+  "objective": "Open the start page of the poll app.\nCreate a poll: in the Question box, type Favourite colour?, and in the Options box, type Red on one line and Blue on the next line. Then click Create poll.\nCheck that the poll \"Favourite colour?\" appears in the list with \"Blue (0)\".",
+  "start_url": "about:blank",
+  "start_time": "2026-11-22T13:30:19.472362+00:00",
+  "config": {
+    "reasoning_provider": "testmuai",
+    "reasoning_model": "v16-alpha",
+    "vision_provider": "testmuai",
+    "vision_model": "v16-alpha",
+    "screen_width": 1920,
+    "screen_height": 1080,
+    "max_steps": 50
+  },
+  "credits_consumed": 13.746362500000002,
+  "steps": [
+    {
+      "step": 1,
+      "duration_ms": 1.2,
+      "url": "http://localhost:38033/",
+      "status": "continue",
+      "step_file": "step_001.json",
+      "action_type": "navigate",
+      "action_target": "Navigate to http://localhost:38033",
+      "success": true,
+      "method": "action"
+    },
+    {
+      "step": 2,
+      "duration_ms": 5078.8,
+      "url": "http://localhost:38033/",
+      "status": "continue",
+      "step_file": "step_002.json",
+      "action_type": "type",
+      "action_target": "Typing Favourite colour? into the question box",
+      "success": true,
+      "method": "dom_action"
+    },
+    {
+      "step": 3,
+      "duration_ms": 3613.5,
+      "url": "http://localhost:38033/",
+      "status": "continue",
+      "step_file": "step_003.json",
+      "action_type": "wait",
+      "action_target": "queued plan (2 steps): type \"Options, one per line\"; click \"Create poll\"",
+      "success": true,
+      "method": "action"
+    },
+    {
+      "step": 4,
+      "duration_ms": 117.6,
+      "url": "http://localhost:38033/",
+      "status": "continue",
+      "step_file": "step_004.json",
+      "action_type": "type",
+      "action_target": "Type \"Red\nBlue\" into \"Options, one per line\"",
+      "success": true,
+      "method": "dom_action"
+    },
+    {
+      "step": 5,
+      "duration_ms": 273.4,
+      "url": "http://localhost:38033/",
+      "status": "continue",
+      "step_file": "step_005.json"
+    },
+    {
+      "step": 6,
+      "duration_ms": 2831.4,
+      "url": "http://localhost:38033/",
+      "status": "continue",
+      "step_file": "step_006.json",
+      "action_type": "click",
+      "action_target": "Clicking Create poll button",
+      "success": true,
+      "method": "dom_action"
+    },
+    {
+      "step": 7,
+      "duration_ms": 11152.1,
+      "url": "http://localhost:38033/",
+      "status": "continue",
+      "step_file": "step_007.json",
+      "action_type": "analyze",
+      "action_target": "ANALYZE(textual_visual, '\"Blue (0)\" appears with the poll \"Favourite colour?\"', ",
+      "success": true,
+      "method": "action"
+    },
+    {
+      "step": 8,
+      "duration_ms": 7.5,
+      "url": "http://localhost:38033/",
+      "status": "passed",
+      "step_file": "step_008.json",
+      "action_type": "assert",
+      "action_target": "the poll \"Favourite colour?\" appears in the list with \"Blue (0)\"",
+      "success": true,
+      "method": "assertion"
+    }
+  ],
+  "errors": [],
+  "end_time": "2026-11-22T13:30:53.087420+00:00",
+  "total_duration_ms": 0,
+  "final_status": "complete",
+  "final_url": "http://localhost:38033/",
+  "total_steps": 8,
+  "reason": "Objective completed"
+}

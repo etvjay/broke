@@ -1,0 +1,10 @@
+{
+  "kind": "assert",
+  "status": "passed",
+  "summary": "assert: the poll shows the options \"Noodles (0)\" and \"Tacos (0)\".",
+  "duration_ms": 8.2,
+  "url": "http://localhost:45869/",
+  "action_id": "1247a887-a354-4d23-8ee1-8a241b7cc2b1",
+  "ordinal": 9,
+  "id": "0-9"
+}

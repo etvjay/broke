@@ -1,0 +1,10 @@
+{
+  "kind": "assert",
+  "status": "passed",
+  "summary": "assert: a poll with the question \"Lunch spot?\" appears in the list.",
+  "duration_ms": 9.1,
+  "url": "http://localhost:45869/",
+  "action_id": "7572e814-0da7-4965-88c0-2dfc4c55dde0",
+  "ordinal": 8,
+  "id": "0-8"
+}

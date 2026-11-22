@@ -1,0 +1,16 @@
+{
+  "kind": "type",
+  "status": "passed",
+  "summary": "type: Typing Favourite colour? into the question box",
+  "duration_ms": 5079.7,
+  "url": "http://localhost:38033/",
+  "action_id": "2a0e1d9f-b245-40a8-a02d-6e5d37154a15",
+  "element_rect": {
+    "x": 667,
+    "y": 137,
+    "width": 586,
+    "height": 19
+  },
+  "ordinal": 2,
+  "id": "0-2"
+}

@@ -1,0 +1,16 @@
+{
+  "kind": "type",
+  "status": "passed",
+  "summary": "type: Typing Best tea? in the Question box",
+  "duration_ms": 8954.2,
+  "url": "http://localhost:45909/",
+  "action_id": "28366784-67ff-44ff-8536-064e15b8f5a0",
+  "element_rect": {
+    "x": 667,
+    "y": 137,
+    "width": 586,
+    "height": 19
+  },
+  "ordinal": 2,
+  "id": "0-2"
+}

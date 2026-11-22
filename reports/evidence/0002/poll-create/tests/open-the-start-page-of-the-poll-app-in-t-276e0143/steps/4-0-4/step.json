@@ -1,0 +1,16 @@
+{
+  "kind": "type",
+  "status": "passed",
+  "summary": "type: Typing Noodles into the options textbox",
+  "duration_ms": 3767.3,
+  "url": "http://localhost:45869/",
+  "action_id": "f78cff03-e11f-4a9b-9a20-c950d1a6af87",
+  "element_rect": {
+    "x": 666,
+    "y": 206,
+    "width": 588,
+    "height": 57
+  },
+  "ordinal": 4,
+  "id": "0-4"
+}

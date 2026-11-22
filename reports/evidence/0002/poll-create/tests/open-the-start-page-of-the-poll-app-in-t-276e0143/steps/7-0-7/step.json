@@ -1,0 +1,10 @@
+{
+  "kind": "assert",
+  "status": "passed",
+  "summary": "assert: the message \"Poll created.\" appears under the form.",
+  "duration_ms": 6.5,
+  "url": "http://localhost:45869/",
+  "action_id": "ecd83f81-cc8e-4974-9c2c-7fb42bd873f0",
+  "ordinal": 7,
+  "id": "0-7"
+}

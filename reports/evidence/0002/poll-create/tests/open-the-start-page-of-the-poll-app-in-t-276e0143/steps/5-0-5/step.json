@@ -1,0 +1,16 @@
+{
+  "kind": "click",
+  "status": "passed",
+  "summary": "click: Clicking Create poll button",
+  "duration_ms": 5696.8,
+  "url": "http://localhost:45869/",
+  "action_id": "1f99d994-8fe4-43c7-890d-86f15450a4e9",
+  "element_rect": {
+    "x": 671,
+    "y": 296,
+    "width": 87,
+    "height": 19
+  },
+  "ordinal": 5,
+  "id": "0-5"
+}

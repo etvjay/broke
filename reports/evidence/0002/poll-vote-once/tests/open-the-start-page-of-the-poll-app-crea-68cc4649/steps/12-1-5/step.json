@@ -1,0 +1,14 @@
+{
+  "kind": "analyze",
+  "status": "passed",
+  "summary": "analyze: the poll still shows \"Black (0)\"",
+  "duration_ms": 13919.3,
+  "url": "http://localhost:45909/",
+  "action_id": "1ef4efb3-a27e-4fc0-ab9d-dfd6abf3040e",
+  "analyze_action_ids": [
+    "37310794-2b2f-4fb0-9f30-92714f6de98b",
+    "1ef4efb3-a27e-4fc0-ab9d-dfd6abf3040e"
+  ],
+  "ordinal": 12,
+  "id": "1-5"
+}
