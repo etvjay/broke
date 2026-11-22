@@ -24,8 +24,9 @@ import {
 } from "./lib/race-support.mjs";
 import { classifyRed } from "./lib/summary.mjs";
 
-// Starts a fix race from a red report. Three Droid racers each fix the app in
-// their own worktree, each attempt is verified, and the comparison goes to the owner.
+// Starts a fix race from a red report. Three Droid racers fix the app, one after
+// another, each in its own worktree. Each attempt is verified before the next racer
+// starts, and the comparison goes to the owner.
 // Exit codes: 0 a green attempt waits for the owner's pick; 1 no attempt is green,
 // so nothing merged; 2 refused before any racer ran, or an error.
 export async function runRace({
@@ -136,22 +137,19 @@ async function runAttempts({ root, number, start, droidBin, verifyScript, racerT
   for (const letter of LETTERS) {
     await addWorktree({ root, path: worktreePath(root, number, letter), branch: branchName(number, letter), start: start.head });
   }
-  log(`race ${padNumber(number)}: three racers start, one per worktree`);
-  const racers = await Promise.all(
-    LETTERS.map((letter) => {
-      const path = worktreePath(root, number, letter);
-      return runProcess({
-        command: droidBin,
-        args: ["exec", "--auto", "medium", "--cwd", path, "-f", join(dir, "brief.md"), "-o", "stream-json"],
-        cwd: path,
-        logFile: join(dir, `racer-${letter}.jsonl`),
-        timeoutMs: racerTimeoutMs
-      });
-    })
-  );
+  // Racers run one at a time, so each attempt is verified before the next racer starts.
   const attempts = [];
-  for (const [index, letter] of LETTERS.entries()) {
-    attempts.push(await evaluateAttempt({ root, number, letter, base: start.head, racer: racers[index], verifyScript, log }));
+  for (const letter of LETTERS) {
+    const path = worktreePath(root, number, letter);
+    log(`racer ${letter}: starting`);
+    const racer = await runProcess({
+      command: droidBin,
+      args: ["exec", "--auto", "medium", "--cwd", path, "-f", join(dir, "brief.md"), "-o", "stream-json"],
+      cwd: path,
+      logFile: join(dir, `racer-${letter}.jsonl`),
+      timeoutMs: racerTimeoutMs
+    });
+    attempts.push(await evaluateAttempt({ root, number, letter, base: start.head, racer, verifyScript, log }));
   }
   return attempts;
 }

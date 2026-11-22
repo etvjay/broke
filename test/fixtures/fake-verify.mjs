@@ -6,7 +6,7 @@
 // Like verify.mjs: an attempt run (--attempt-out) writes its summary and report there
 // and commits nothing; a normal run writes NNNN.md and NNNN.json and commits both.
 import { execFileSync } from "node:child_process";
-import { mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { appendFileSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { basename, join } from "node:path";
 
 const args = process.argv.slice(2);
@@ -14,6 +14,8 @@ const flag = (name) => (args.includes(name) ? args[args.indexOf(name) + 1] : nul
 const root = flag("--root");
 const attemptOut = flag("--attempt-out");
 const label = flag("--label");
+// With FAKE_ORDER_LOG set, an attempt run appends its worktree's letter, so a test can read the order.
+if (attemptOut !== null && process.env.FAKE_ORDER_LOG) appendFileSync(process.env.FAKE_ORDER_LOG, `verify ${basename(root).slice(-1)}\n`);
 const git = (...rest) => execFileSync("git", ["-C", root, ...rest]).toString().trim();
 
 let marker = "missing";

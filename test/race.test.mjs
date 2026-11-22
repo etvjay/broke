@@ -117,6 +117,20 @@ async function startRace(ctx, modes = {}) {
 const pick = (ctx, letter, reason, lines = []) =>
   runPick({ root: ctx.repo, number: "0001", letter, reason, verifyScript: FAKE_VERIFY, log: (line) => lines.push(line) });
 
+test("racers run one at a time: each attempt is verified before the next racer starts", async () => {
+  const ctx = await setup();
+  const order = join(ctx.dir, "order.log");
+  process.env.FAKE_ORDER_LOG = order;
+  try {
+    const { code } = await startRace(ctx, { a: "green", b: "green", c: "green" });
+    assert.equal(code, 0);
+    const lines = (await readFile(order, "utf8")).trim().split("\n");
+    assert.deepEqual(lines, ["start a", "end a", "verify a", "start b", "end b", "verify b", "start c", "end c", "verify c"]);
+  } finally {
+    delete process.env.FAKE_ORDER_LOG;
+  }
+});
+
 test("a second race is refused while the lock is held", async () => {
   const ctx = await setup();
   assert.equal(await acquireLock(7, "0".repeat(40)), true);
