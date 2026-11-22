@@ -11,6 +11,12 @@ test("createPoll rejects fewer than two options and changes nothing", () => {
   assert.equal(polls.length, 0);
 });
 
+test("createPoll refuses two options with the same label, whatever the case", () => {
+  const polls = [];
+  assert.throws(() => createPoll(polls, { question: "Best tea?", options: ["Green", " green "] }), /options must be different from each other/);
+  assert.equal(polls.length, 0);
+});
+
 test("createPoll trims the question and options and starts every tally at zero", () => {
   const polls = [];
   const poll = createPoll(polls, { question: "  Best tea?  ", options: [" Green ", "Black"] });

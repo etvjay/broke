@@ -88,11 +88,19 @@ function cleanOptions(value) {
   if (value.length < OPTIONS_MIN || value.length > OPTIONS_MAX) {
     throw invalid(`options must have ${OPTIONS_MIN} to ${OPTIONS_MAX} entries`);
   }
-  return value.map(cleanOption);
+  const options = value.map(cleanOption);
+  if (new Set(options.map(lowerLabel)).size < options.length) {
+    throw invalid("options must be different from each other");
+  }
+  return options;
 }
 
 function cleanOption(value) {
   return cleanText(value, "option", OPTION_MAX);
+}
+
+function lowerLabel(label) {
+  return label.toLowerCase();
 }
 
 function startTally(label) {

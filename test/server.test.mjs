@@ -98,6 +98,16 @@ test("GET /api/polls tells each browser which option it chose, and others nothin
   assert.equal(listedB.polls.find((listed) => listed.id === poll.id).yourVote, null);
 });
 
+test("POST /api/polls refuses options that repeat, whatever the case", async () => {
+  const repeated = await fetch(`${base}/api/polls`, {
+    method: "POST",
+    headers: JSON_HEADERS,
+    body: JSON.stringify({ question: "Pick one", options: ["Red", "red"] })
+  });
+  assert.equal(repeated.status, 400);
+  assert.match((await repeated.json()).error, /options must be different from each other/);
+});
+
 test("bad input gets clear errors", async () => {
   const solo = await fetch(`${base}/api/polls`, { method: "POST", headers: JSON_HEADERS, body: JSON.stringify({ question: "Solo?", options: ["Only"] }) });
   assert.equal(solo.status, 400);

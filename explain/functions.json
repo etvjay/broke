@@ -164,8 +164,8 @@
   {
     "file": "app/store.mjs",
     "name": "cleanOptions",
-    "explanation": "Checks that the options are a list of two to ten valid option labels, and returns them cleaned.",
-    "hash": "c8312610a2fa719c51f3fcd7e65b7a4f4e1aa87fc5c6099b619ef7bb1580c829"
+    "explanation": "Checks that the options are a list of two to ten valid option labels, and returns them cleaned. Two labels that match without regard to case or outer spaces are refused.",
+    "hash": "c1b02b9b9a54e8d290a6f073bf8f19c43db58edd8c7a97382bc128353bc9a0a1"
   },
   {
     "file": "app/store.mjs",
@@ -208,6 +208,12 @@
     "name": "loadPolls",
     "explanation": "Reads the poll list from the JSON data file. A missing file counts as an empty list, and a file that does not hold a list is an error. Each poll is brought up to the current ballot format on the way in.",
     "hash": "0193583a2ecdb1810432fac4c99fb52bd60a4a1980b838eceb4048c838eade6f"
+  },
+  {
+    "file": "app/store.mjs",
+    "name": "lowerLabel",
+    "explanation": "Returns one option label in lower case, so that two labels can be compared without regard to case.",
+    "hash": "317dbcd8506743ba2e08a558b42199f87a6d7c1f0330ea96f98b70c5afbf4ec1"
   },
   {
     "file": "app/store.mjs",
