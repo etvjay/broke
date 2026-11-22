@@ -9,6 +9,7 @@
   },
   "scripts": {
     "start": "node app/server.mjs",
-    "test": "node --test test/*.test.mjs"
+    "test": "node --test test/*.test.mjs",
+    "flows:approve": "node scripts/flows-approve.mjs"
   }
 }
