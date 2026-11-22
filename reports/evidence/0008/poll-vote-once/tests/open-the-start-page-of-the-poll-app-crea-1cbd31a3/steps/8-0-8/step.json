@@ -1,0 +1,10 @@
+{
+  "kind": "assert",
+  "status": "passed",
+  "summary": "assert: the poll shows \"Green (1)\"",
+  "duration_ms": 6.7,
+  "url": "http://localhost:34907/",
+  "action_id": "dd5c9fc4-9af4-48b3-8c25-073fe5f60710",
+  "ordinal": 8,
+  "id": "0-8"
+}

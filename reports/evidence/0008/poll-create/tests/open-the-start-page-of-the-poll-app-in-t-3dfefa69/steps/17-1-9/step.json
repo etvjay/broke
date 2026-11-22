@@ -1,0 +1,10 @@
+{
+  "kind": "assert",
+  "status": "passed",
+  "summary": "assert: the message \"options must have 2 to 10 entries\" appears under the form",
+  "duration_ms": 5.3,
+  "url": "http://localhost:41821/",
+  "action_id": "0b8d5b92-6fcd-4e68-a19d-99e6e40a6201",
+  "ordinal": 17,
+  "id": "1-9"
+}

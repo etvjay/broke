@@ -1,0 +1,16 @@
+{
+  "kind": "type",
+  "status": "passed",
+  "summary": "type: Typing poll option Noodles and Tacos into the options field",
+  "duration_ms": 5259.0,
+  "url": "http://localhost:41821/",
+  "action_id": "ad505015-724d-40a0-8ae3-d041926e3b83",
+  "element_rect": {
+    "x": 666,
+    "y": 206,
+    "width": 588,
+    "height": 57
+  },
+  "ordinal": 3,
+  "id": "0-3"
+}

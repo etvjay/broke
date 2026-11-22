@@ -1,0 +1,15 @@
+{
+  "kind": "analyze",
+  "status": "passed",
+  "summary": "analyze: the second vote did not count",
+  "duration_ms": 21736.9,
+  "url": "http://localhost:34907/",
+  "action_id": "a6b1ba62-de18-4558-8c42-f5a644b5c8c5",
+  "analyze_action_ids": [
+    "e46d5a46-027d-47ac-ac68-6902fd857bff",
+    "109af71d-c6b8-4807-9eec-da3eedb5691f",
+    "a6b1ba62-de18-4558-8c42-f5a644b5c8c5"
+  ],
+  "ordinal": 10,
+  "id": "0-10"
+}

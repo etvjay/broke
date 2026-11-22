@@ -1,0 +1,14 @@
+{
+  "kind": "analyze",
+  "status": "passed",
+  "summary": "analyze: ANALYZE(textual_visual, 'no poll with the question \"Only one?\" appears in the li",
+  "duration_ms": 14657.3,
+  "url": "http://localhost:41821/",
+  "action_id": "42049d6d-3cdc-431d-9b4f-db29c6a0fb36",
+  "analyze_action_ids": [
+    "6389da0c-92ed-479a-8c7a-badc03f7feaa",
+    "42049d6d-3cdc-431d-9b4f-db29c6a0fb36"
+  ],
+  "ordinal": 16,
+  "id": "1-8"
+}
