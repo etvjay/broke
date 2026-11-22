@@ -212,8 +212,8 @@
   {
     "file": "app/store.mjs",
     "name": "lowerLabel",
-    "explanation": "Returns one option label in lower case, so that two labels can be compared without regard to case.",
-    "hash": "317dbcd8506743ba2e08a558b42199f87a6d7c1f0330ea96f98b70c5afbf4ec1"
+    "explanation": "Makes an option label ready for the repeat check. Each run of spaces or tabs becomes one space, and letters become lowercase, so labels that read the same compare equal.",
+    "hash": "53b3a451d00d49c877b397bcae901407c8eac3be1571c9c14fc91c79f0ff4132"
   },
   {
     "file": "app/store.mjs",

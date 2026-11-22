@@ -100,7 +100,7 @@ function cleanOption(value) {
 }
 
 function lowerLabel(label) {
-  return label.toLowerCase();
+  return label.replace(/\s+/g, " ").toLowerCase();
 }
 
 function startTally(label) {

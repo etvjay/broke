@@ -17,6 +17,12 @@ test("createPoll refuses two options with the same label, whatever the case", ()
   assert.equal(polls.length, 0);
 });
 
+test("createPoll refuses two options that differ only in spacing", () => {
+  const polls = [];
+  assert.throws(() => createPoll(polls, { question: "Best tea?", options: ["Red  Blue", "Red Blue"] }), /options must be different from each other/);
+  assert.equal(polls.length, 0);
+});
+
 test("createPoll trims the question and options and starts every tally at zero", () => {
   const polls = [];
   const poll = createPoll(polls, { question: "  Best tea?  ", options: [" Green ", "Black"] });
