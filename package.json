@@ -12,7 +12,8 @@
     "test": "node --test test/*.test.mjs",
     "flows:approve": "node scripts/flows-approve.mjs",
     "explain": "node scripts/explain.mjs",
-    "drift": "node scripts/drift.mjs"
+    "drift": "node scripts/drift.mjs",
+    "verify": "node scripts/verify.mjs"
   },
   "devDependencies": {
     "acorn": "^8.19.0"
