@@ -1,4 +1,5 @@
 data/
-node_modules/
+# No trailing slash: race worktrees link node_modules as a symlink, and a slash would not match it.
+node_modules
 *.log
 .coverage-tmp/

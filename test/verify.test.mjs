@@ -70,6 +70,34 @@ async function appendToServer(root, statement) {
 const scenario = (name) => ({ FAKE_KANE_SCENARIO: name });
 const reportPath = (root) => join(root, "reports", "0001.md");
 
+test("a green run also commits its summary as reports/0001.json", { timeout: 120000 }, async () => {
+  const root = await makeRepo();
+  const head = (await git(root, ["rev-parse", "HEAD"])).trim();
+  assert.equal(await runVerify({ root, kaneBin: FAKE_KANE, kaneEnv: scenario("pass") }), 0);
+  const summary = JSON.parse(await readFile(join(root, "reports", "0001.json"), "utf8"));
+  assert.equal(summary.testedCommit, head);
+  assert.equal(summary.outcome, "pass");
+  assert.deepEqual(summary.flows.map((flow) => flow.name), ["poll-create.md", "poll-vote.md", "poll-vote-once.md"]);
+  assert.ok(summary.flows[0].trace.length > 0);
+});
+
+test("attempt mode writes the report and summary outside the repo and commits nothing", { timeout: 120000 }, async () => {
+  const root = await makeRepo();
+  const head = (await git(root, ["rev-parse", "HEAD"])).trim();
+  const out = await mkdtemp(join(tmpdir(), "wib-attempt-"));
+  temps.push(out);
+  const attemptOut = join(out, "a");
+  assert.equal(await runVerify({ root, kaneBin: FAKE_KANE, kaneEnv: scenario("pass"), attemptOut, label: "race 0001 attempt a" }), 0);
+  assert.equal((await git(root, ["rev-parse", "HEAD"])).trim(), head);
+  assert.equal((await git(root, ["status", "--porcelain"])).trim(), "");
+  const report = await readFile(join(attemptOut, "report.md"), "utf8");
+  assert.match(report, /^# Why It Broke report: race 0001 attempt a$/m);
+  assert.match(report, new RegExp(`Tested commit: ${head}`));
+  const summary = JSON.parse(await readFile(join(attemptOut, "summary.json"), "utf8"));
+  assert.equal(summary.number, null);
+  assert.equal(summary.outcome, "pass");
+});
+
 async function assertNoReports(root) {
   await assert.rejects(readdir(join(root, "reports")), { code: "ENOENT" });
 }

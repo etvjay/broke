@@ -1,7 +1,8 @@
 import { mkdir, mkdtemp, readFile, readdir, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
+import { parseArgs } from "node:util";
 import { APP_BOOT_TIMEOUT_MS, CREDIT_FLOOR, FLOWS, KANE_BIN, ROOT, STOP_TIMEOUT_MS, TUNNEL_MODE } from "./config.mjs";
 import { checkDrift } from "./drift.mjs";
 import { describeExit, freePort, startApp, stopApp, waitForApp } from "./lib/app-process.mjs";
@@ -10,22 +11,24 @@ import { countKey, readRun } from "./lib/coverage.mjs";
 import { prepareEvidence, writeEvidenceFiles } from "./lib/evidence.mjs";
 import { readExplanations } from "./lib/explanations.mjs";
 import { functionKey, scanApp } from "./lib/functions.mjs";
-import { git, gitConfig } from "./lib/git.mjs";
+import { COAUTHOR, git, gitConfig } from "./lib/git.mjs";
 import { sha256File } from "./lib/hash.mjs";
 import { classifyRun, runKane } from "./lib/kane.mjs";
 import { redact, redactFields, scanSecrets } from "./lib/redact.mjs";
 import { padNumber, renderReport } from "./lib/report.mjs";
-
-const COAUTHOR = "Co-authored-by: factory-droid[bot] <138933559+factory-droid[bot]@users.noreply.github.com>";
+import { buildSummary } from "./lib/summary.mjs";
 
 // Exit codes: 0 all flows pass and drift passes; 1 a flow fails or drift fails;
 // 2 an error (refused run, app did not start, no run_end, missing coverage).
+// With attemptOut, the report and summary are written there and nothing is committed.
 export async function runVerify({
   root = ROOT,
   kaneBin = KANE_BIN,
   kaneEnv = {},
   pickPort = freePort,
   stopTimeoutMs = STOP_TIMEOUT_MS,
+  attemptOut = null,
+  label = "attempt",
   log = () => {}
 } = {}) {
   if ((await git(root, ["status", "--porcelain"])).trim() !== "") {
@@ -47,7 +50,8 @@ export async function runVerify({
     log(`refused: ${balance} Kane credits left, below the ${CREDIT_FLOOR} floor.`);
     return 2;
   }
-  const number = await nextReportNumber(join(root, "reports"));
+  const attempt = attemptOut !== null;
+  const number = attempt ? null : await nextReportNumber(join(root, "reports"));
   const flows = [];
   for (const name of FLOWS) {
     const flow = await runFlow({ root, appDir, name, kaneBin, env, functions, pickPort, stopTimeoutMs });
@@ -57,7 +61,7 @@ export async function runVerify({
   for (const flow of flows) {
     flow.reason = redact(flow.reason);
     flow.verdict = flow.verdict === null ? null : redactFields(flow.verdict);
-    flow.evidence = await prepareEvidence({ packPath: flow.packPath, dir: `evidence/${padNumber(number)}/${flow.name.replace(/\.md$/, "")}` });
+    flow.evidence = await prepareEvidence({ packPath: flow.packPath, dir: evidenceDir(number, flow.name) });
     log(`${flow.name}: evidence ${flow.evidence.status}, ${flow.evidence.files.length} text files, ${flow.evidence.blocked.length} left out`);
   }
   const complete = flows.every((flow) => flow.outcome !== "error");
@@ -67,6 +71,7 @@ export async function runVerify({
     ranByFlow: complete ? buildRanByFlow(functions, flows) : undefined
   });
   const markdown = renderReport({
+    title: attempt ? `Why It Broke report: ${label}` : undefined,
     number,
     head,
     flows,
@@ -75,15 +80,23 @@ export async function runVerify({
     functions,
     explanations
   });
-  const leftovers = scanSecrets(markdown).filter((kind) => kind !== "auth value");
+  const summaryJson = `${JSON.stringify(buildSummary({ number, testedCommit: head, flows, drift, functions, explanations, unrunChecked: complete }), null, 2)}\n`;
+  const leftovers = [...new Set([...scanSecrets(markdown), ...scanSecrets(summaryJson)])].filter((kind) => kind !== "auth value");
   if (leftovers.length > 0) {
     log(`refused: the report holds ${leftovers.join(", ")} text after redaction, so nothing was written or committed. Fix the source or the flow text, then run verify again.`);
     return 2;
   }
-  const evidenceDirs = await writeEvidence(root, flows);
-  await commitReport({ root, number, head, markdown, evidenceDirs });
+  if (attempt) {
+    const outDir = resolve(attemptOut);
+    await writeEvidence(outDir, flows);
+    await writeAttempt(outDir, { markdown, summaryJson });
+    log(`report: ${join(outDir, "report.md")} written. Nothing is committed.`);
+  } else {
+    const evidenceDirs = await writeEvidence(join(root, "reports"), flows);
+    await commitReport({ root, number, head, markdown, summaryJson, evidenceDirs });
+    log(`report: reports/${padNumber(number)}.md committed`);
+  }
   log(`drift: ${drift.ok ? "passed" : `failed, ${drift.problems.length} problem(s)`}`);
-  log(`report: reports/${padNumber(number)}.md committed`);
   return exitCodeFor(flows, drift);
 }
 
@@ -182,22 +195,35 @@ function buildRanByFlow(functions, flows) {
   return ranByFlow;
 }
 
-// Writes each flow's clean evidence copy under reports/ and returns the folders written.
-async function writeEvidence(root, flows) {
+// The evidence folder for a flow, relative to reports/ for a normal run or to the attempt folder.
+function evidenceDir(number, flowName) {
+  const stem = flowName.replace(/\.md$/, "");
+  return number === null ? `evidence/${stem}` : `evidence/${padNumber(number)}/${stem}`;
+}
+
+// Writes each flow's clean evidence copy under baseDir. Returns the folders written, relative to baseDir.
+async function writeEvidence(baseDir, flows) {
   const dirs = [];
   for (const flow of flows) {
     if (flow.evidence.files.length === 0) continue;
-    await writeEvidenceFiles(join(root, "reports", flow.evidence.dir), flow.evidence.files);
-    dirs.push(`reports/${flow.evidence.dir}`);
+    await writeEvidenceFiles(join(baseDir, flow.evidence.dir), flow.evidence.files);
+    dirs.push(flow.evidence.dir);
   }
   return dirs;
 }
 
-async function commitReport({ root, number, head, markdown, evidenceDirs }) {
-  const relPath = `reports/${padNumber(number)}.md`;
+async function writeAttempt(dir, { markdown, summaryJson }) {
+  await mkdir(dir, { recursive: true });
+  await writeFile(join(dir, "report.md"), markdown);
+  await writeFile(join(dir, "summary.json"), summaryJson);
+}
+
+async function commitReport({ root, number, head, markdown, summaryJson, evidenceDirs }) {
+  const base = `reports/${padNumber(number)}`;
   await mkdir(join(root, "reports"), { recursive: true });
-  await writeFile(join(root, relPath), markdown, { flag: "wx" });
-  await git(root, ["add", "--", relPath, ...evidenceDirs]);
+  await writeFile(join(root, `${base}.md`), markdown, { flag: "wx" });
+  await writeFile(join(root, `${base}.json`), summaryJson, { flag: "wx" });
+  await git(root, ["add", "--", `${base}.md`, `${base}.json`, ...evidenceDirs.map((dir) => `reports/${dir}`)]);
   await git(root, [
     "commit",
     "-q",
@@ -247,7 +273,19 @@ function joinReasons(reason, extra) {
 
 const isMain = process.argv[1] !== undefined && pathToFileURL(process.argv[1]).href === import.meta.url;
 if (isMain) {
-  runVerify({ log: (line) => console.log(line) }).then(
+  const { values } = parseArgs({
+    options: {
+      root: { type: "string" },
+      "attempt-out": { type: "string" },
+      label: { type: "string" }
+    }
+  });
+  runVerify({
+    root: values.root === undefined ? ROOT : resolve(values.root),
+    attemptOut: values["attempt-out"] ?? null,
+    label: values.label ?? "attempt",
+    log: (line) => console.log(line)
+  }).then(
     (code) => {
       process.exitCode = code;
     },

@@ -15,3 +15,9 @@ export const KANE_MAX_STEPS = 50;
 export const TUNNEL_MODE = "local";
 export const APP_BOOT_TIMEOUT_MS = 15000;
 export const STOP_TIMEOUT_MS = 10000;
+
+// The race starts Droid racers from this command, on PATH.
+export const DROID_BIN = "droid";
+// A racer gets 20 minutes. Task 11 times one real racer and adjusts this if needed.
+export const RACER_TIMEOUT_MS = 20 * 60 * 1000;
+export const VERIFY_SCRIPT = join(ROOT, "scripts", "verify.mjs");

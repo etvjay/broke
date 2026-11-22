@@ -8,13 +8,13 @@ export function padNumber(number) {
 
 // Markdown for one verify run. Each flow gets a section with Kane's verdict
 // and a trace of the app functions its run covered. The drift table ends it.
-export function renderReport({ number, head, flows, drift, driftNote = null, functions, explanations }) {
+export function renderReport({ title = null, number, head, flows, drift, driftNote = null, functions, explanations }) {
   const written = new Map(explanations.map((entry) => [functionKey(entry.file, entry.name), entry.explanation]));
   const status = new Map(
     drift.rows.filter((row) => row.name !== null).map((row) => [functionKey(row.file, row.name), row.explanation])
   );
   const lines = [
-    `# Why It Broke report ${padNumber(number)}`,
+    `# ${title ?? `Why It Broke report ${padNumber(number)}`}`,
     "",
     `Tested commit: ${head}`,
     "",
@@ -35,7 +35,7 @@ export function renderReport({ number, head, flows, drift, driftNote = null, fun
     lines.push("");
     for (const problem of drift.problems) lines.push(`- ${cell(problem.message)}`);
   }
-  lines.push("", "| Location | Function | Explanation | Flows that ran it |", "| --- | --- | --- | --- |");
+  lines.push("", "| Location | Function | Status | Flows that ran it |", "| --- | --- | --- | --- |");
   for (const row of drift.rows) {
     lines.push(`| ${row.file}:${row.line} | ${cell(row.name ?? "(anonymous)")} | ${row.explanation} | ${flowsCell(row)} |`);
   }
