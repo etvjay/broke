@@ -59,7 +59,7 @@ export function findPoll(polls, pollId) {
 }
 
 export function listPolls(polls, voterId) {
-  return polls.map(function viewFor(poll) {
+  return polls.toReversed().map(function viewFor(poll) {
     return publicPoll(poll, voterId);
   });
 }

@@ -59,6 +59,13 @@ test("listPolls hides voter ids and adds a total", () => {
   assert.equal(listed.totalVotes, 1);
 });
 
+test("listPolls shows the newest poll first", () => {
+  const polls = [];
+  createPoll(polls, { question: "First?", options: ["Yes", "No"] });
+  createPoll(polls, { question: "Second?", options: ["Yes", "No"] });
+  assert.deepEqual(listPolls(polls).map((listed) => listed.question), ["Second?", "First?"]);
+});
+
 test("listPolls tells each voter their own choice, and nobody else anything", () => {
   const polls = [];
   const poll = createPoll(polls, { question: "Best tea?", options: ["Green", "Black"] });

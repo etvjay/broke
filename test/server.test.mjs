@@ -108,6 +108,18 @@ test("POST /api/polls refuses options that repeat, whatever the case", async () 
   assert.match((await repeated.json()).error, /options must be different from each other/);
 });
 
+test("GET /api/polls lists the newest poll first", async () => {
+  for (const question of ["Oldest poll?", "Newest poll?"]) {
+    await fetch(`${base}/api/polls`, {
+      method: "POST",
+      headers: JSON_HEADERS,
+      body: JSON.stringify({ question, options: ["Yes", "No"] })
+    });
+  }
+  const listed = await (await fetch(`${base}/api/polls`)).json();
+  assert.deepEqual(listed.polls.slice(0, 2).map((poll) => poll.question), ["Newest poll?", "Oldest poll?"]);
+});
+
 test("bad input gets clear errors", async () => {
   const solo = await fetch(`${base}/api/polls`, { method: "POST", headers: JSON_HEADERS, body: JSON.stringify({ question: "Solo?", options: ["Only"] }) });
   assert.equal(solo.status, 400);

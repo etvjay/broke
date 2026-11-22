@@ -200,8 +200,8 @@
   {
     "file": "app/store.mjs",
     "name": "listPolls",
-    "explanation": "Returns every poll in a form safe to send to the browser, without voter ids. Each poll says which option the given voter chose, or null when that voter has not chosen one or no voter is given.",
-    "hash": "a58b1b6c56c316e499dcd3306f77c0bc67a9eb9e8209d3eb7f7312d411d3729d"
+    "explanation": "Returns every poll in a form safe to send to the browser, without voter ids, with the newest poll first. Each poll says which option the given voter chose, or null when that voter has not chosen one or no voter is given.",
+    "hash": "6f7fe47a5d49a4f66ad55767eb5a14afbcbd84837a0bc0863005b7e1255756f0"
   },
   {
     "file": "app/store.mjs",
