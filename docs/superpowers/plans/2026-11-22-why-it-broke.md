@@ -15,7 +15,7 @@
 - Node 24. `app/` has no runtime dependencies. Scripts may use one dev dependency, `acorn`, to parse `app/**/*.mjs` (my call; the owner confirms in plan review).
 - Port: `PORT` env, default `3000`. Verify and race attempts use random free ports.
 - Every Kane run passes `--target desktop --headless --agent`. Per-flow timeout is set in `scripts/config.mjs` from Task 1 measurements, with at least 2x headroom.
-- Runner stops below 2,000 Kane credits. A race costs about 120 credits for three verifies.
+- Runner stops below 2,000 Kane credits. Three race attempt verifies cost about 100 to 190 credits (Task 1 measurements).
 - Exit codes for `npm run verify`: `0` all flows pass and drift passes; `1` a flow fails or drift fails; `2` error (no `run_end`, unapproved flow, dirty tree, low credits, app failed to start, missing coverage).
 - Verify refuses a dirty tree. It runs on a commit.
 - Evidence is redacted before commit. A second secret scan blocks any file that still matches.
@@ -36,7 +36,7 @@
 ## File Structure
 
 - `app/server.mjs`: HTTP routes, cookie voter id, clean shutdown. Only file that starts a server.
-- `app/store.mjs`: JSON store read/write and poll logic (`createPoll`, `castVote`). Pure functions taking data.
+- `app/store.mjs`: JSON store read/write and poll logic (`createPoll`, `castVote`). Functions that take the data array and update it in place.
 - `app/public/index.html`, `app/public/app.js`: browser UI. Thin fetch layer, no logic. Outside drift scope.
 - `flows/*.md`, `flows/approvals.json`: Kane objectives and owner-approved hashes.
 - `scripts/config.mjs`: paths, timeouts, credit floor, port range.
@@ -202,10 +202,10 @@ Findings go to `/home/ubuntu/kane-research/build-step-1/FINDINGS.md`. Nothing un
 **Interfaces:**
 - Consumes: `scanApp`, `checkDrift`, `sha256File`, Task 1 field names and command line
 - Produces:
-  - `config.mjs`: `FLOWS = ["poll-create","poll-vote","poll-vote-once"]`, `CREDIT_FLOOR = 2000`, `FLOW_TIMEOUT_S` (from Task 1), `TUNNEL_MODE`, `REPORTS_DIR`
-  - `kane.mjs`: `runKane({ flowFile, url, timeoutS }) -> { exitCode, runEnd, verdict, events, creditsConsumed, packPath }`. No `run_end` gives `runEnd: null`.
+  - `config.mjs`: `FLOWS = ["poll-create","poll-vote","poll-vote-once"]`, `CREDIT_FLOOR = 2000`, `FLOW_TIMEOUT_S = 300` (Task 1: slowest probe took 74.5 s wall), `TUNNEL_MODE`, `REPORTS_DIR`
+  - `kane.mjs`: `runKane({ flowFile, url, timeoutS }) -> { exitCode, runEnd, verdict, events, creditsConsumed, packPath }`. Passes the flow file's text as the objective argument, spawned with an args array and no shell, because `kane-cli run` rejects `.md` paths. Step events are the lines with a `step` key and no `type`. `runEnd.status` is `passed` or `failed`. `verdict` appears only on a failed `run_end`. No `run_end` gives `runEnd: null`.
   - `coverage.mjs`: `readRun(coverageDir) -> Map<"file:startOffset", count>`. Missing or empty coverage throws.
-  - `balance.mjs`: `getBalance() -> number`
+  - `balance.mjs`: `getBalance() -> number`, parsed from the `Available credits: <n>` line of `kane-cli balance`.
   - `verify.mjs`: flow loop per the design's verify steps; exit codes as in Global Constraints; writes `reports/NNNN.md` via `report.mjs` (Task 6) and commits it as its own commit that names the tested SHA.
 
 - [ ] **Step 1: Write failing tests** with `fake-kane.mjs` (a stub that writes configured NDJSON and exits with a set code). Cases: pass gives `pass`; exit 1 with verdict gives `fail`; stream ends without `run_end` gives `error`; dirty tree refuses with exit `2`; port taken gives exit `2`; missing coverage gives `error`; unapproved flow hash gives exit `2`.
@@ -241,7 +241,7 @@ Findings go to `/home/ubuntu/kane-research/build-step-1/FINDINGS.md`. Nothing un
 - Modify: `scripts/verify.mjs` (copy redacted evidence into `reports/evidence/NNNN/<flow>/`)
 
 **Interfaces:**
-- Consumes: Kane evidence pack path from `kane.mjs`
+- Consumes: Kane evidence pack path from `kane.mjs`. The `pack` key of the coverage event holds the path even when its status is `skipped`. The stderr line `kane-cli evidence serve <path>` prints the same path.
 - Produces:
   - `redact(text) -> string`: replaces email addresses, IPv4 addresses, `/home/ubuntu`, the Kane profile name, and cookie or authorization header values
   - `scanSecrets(text) -> string[]`: returns matches left after redaction; a non-empty result blocks that file
@@ -266,7 +266,7 @@ Findings go to `/home/ubuntu/kane-research/build-step-1/FINDINGS.md`. Nothing un
   - `lock.mjs`: `acquireLock(raceId, head) -> boolean` (file `~/.why-it-broke/race.lock`, JSON `{raceId, head, state}`); `releaseLock()`; `readLock() -> object|null`
   - `brief.mjs`: `buildBrief({ report, verdicts, trace }) -> string` (written to `reports/races/NNNN/brief.md`)
   - `compare.mjs`: `renderComparison(attempts) -> string`. Names no winner.
-  - `race.mjs`: refuses if HEAD is not red, or lock held. Creates worktrees `../why-it-broke-race-NNNN-<a|b|c>` on branches `race/NNNN-<letter>`. Starts three `droid exec` in parallel, one per worktree, with the brief. Waits. Counts a racer with no commit as failed. Verifies attempts one at a time in their worktrees. Writes `comparison.md`. With no green attempt, releases the lock and stops.
+  - `race.mjs`: refuses if HEAD is not red, or lock held. Creates worktrees `../why-it-broke-race-NNNN-<a|b|c>` on branches `race/NNNN-<letter>`. Starts three `droid exec --auto medium --cwd <worktree> -f <brief-file> -o stream-json` in parallel, one per worktree, with the brief. `--auto medium` allows local commits and blocks pushes (Task 1). Waits. Counts a racer with no commit as failed. Verifies attempts one at a time in their worktrees. Writes `comparison.md`. With no green attempt, releases the lock and stops.
   - `race-pick.mjs NNNN <letter> --reason "<text>"`: refuses a non-green attempt. Merges `--no-ff` in a temp worktree of main, runs verify there, fast-forwards main only on green, records result in `pick.md`, removes worktrees on success, keeps branches. Red leaves main alone and keeps the lock.
   - `race-close.mjs NNNN`: clears the lock when green attempts exist but no pick.
 
@@ -284,7 +284,7 @@ Findings go to `/home/ubuntu/kane-research/build-step-1/FINDINGS.md`. Nothing un
 - Create: `scripts/stop-hook.mjs`, `.factory/hooks.json`, `test/stop-hook.test.mjs`
 
 **Interfaces:**
-- Consumes: hook stdin JSON (Task 1 format), `git status`, `reports/` latest tested SHA, `lock.mjs`
+- Consumes: hook stdin JSON (Task 1 format: `session_id`, `transcript_path`, `cwd`, `permission_mode`, `hook_event_name`, `message_id`), `git status`, `reports/` latest tested SHA, `lock.mjs`. `stop_hook_active` comes from an earlier doc read, so confirm it in Step 1 before the loop guard relies on it.
 - Produces: exit `2` with a message asking for a commit (uncommitted changes under `app/` or `explain/`); exit `0` with a message when `stop_hook_active` is true; exit `0` after running verify on a new commit; on red that qualifies for a race, starts `race.mjs` detached and exits `0` with the message to the owner; other reds exit `0` with the reason.
 - `.factory/hooks.json`: Stop hook, command `node /home/ubuntu/kane/scripts/stop-hook.mjs`, timeout above the longest verify run (default is 60 s).
 
