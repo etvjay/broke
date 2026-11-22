@@ -72,13 +72,15 @@ After an agent turn that changes `app/` or `explain/`, the Stop hook (`.factory/
 
 If no attempt is green, nothing merges. The records go to branch `race/NNNN-report`, and the race lock clears so the owner can decide the next step. A green race puts its records on the same branch while it waits for the pick. A race costs about three verifies' worth of Kane credits.
 
+If a race stops before it finishes, for example when the machine restarts, its lock goes stale. The next red clears the lock and starts a new race. To close a stopped race by hand, run `npm run race:close -- NNNN`.
+
 ## Owner commands
 
 Only the owner runs these:
 
 - `npm run flows:approve` records the hash of each flow file after the owner reads it. Verify refuses a flow whose text changed since its approval.
 - `npm run race:pick -- NNNN <a|b|c> --reason "<text>"` merges one green attempt into main.
-- `npm run race:close -- NNNN` clears the lock on a race that has green attempts but no pick.
+- `npm run race:close -- NNNN` clears the lock on a race that has green attempts but no pick, or on a race that stopped.
 
 ## Agent rules
 

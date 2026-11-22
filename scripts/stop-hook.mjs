@@ -12,7 +12,7 @@ import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { RACE_SCRIPT, VERIFY_SCRIPT } from "./config.mjs";
 import { git } from "./lib/git.mjs";
-import { readLock, stateDir } from "./lib/lock.mjs";
+import { isStaleLock, readLock, stateDir } from "./lib/lock.mjs";
 import { padNumber } from "./lib/report.mjs";
 import { listDir, readJsonOrNull } from "./lib/race-support.mjs";
 import { classifyRed } from "./lib/summary.mjs";
@@ -68,7 +68,7 @@ export async function runStopHook(input, { verifyScript = VERIFY_SCRIPT, raceScr
     return 0;
   }
   const held = await readLock();
-  if (held !== null) {
+  if (held !== null && !isStaleLock(held)) {
     out(`Verified red: report ${pad}. ${decision.reason} Race ${padNumber(held.raceId)} holds the lock, so no new race starts.`);
     return 0;
   }

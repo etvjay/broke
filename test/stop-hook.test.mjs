@@ -172,6 +172,21 @@ test("a red while a race holds the lock does not start another race", async () =
   assert.equal(existsSync(marker), false);
 });
 
+test("a red over a lock left by an exited race starts a new race", async () => {
+  const ctx = await setup();
+  const exited = spawnSync(process.execPath, ["-e", ""]).pid;
+  await mkdir(join(ctx.home, ".why-it-broke"), { recursive: true });
+  await writeFile(join(ctx.home, ".why-it-broke", "race.lock"), `${JSON.stringify({ raceId: 2, head: "0".repeat(40), state: "racing", pid: exited })}\n`);
+  await changeApp(ctx.repo, "red\n");
+  commit(ctx.repo, "fix: attempt");
+  const marker = join(ctx.dir, "race-started.json");
+  const r = runHook({ repo: ctx.repo, home: ctx.home, env: { FAKE_RACE_MARKER: marker } });
+  assert.equal(r.code, 0, r.stderr);
+  assert.match(r.stdout, /A fix race started in the background/);
+  assert.doesNotMatch(r.stdout, /holds the lock/);
+  assert.equal(await waitForFile(marker), true);
+});
+
 test("a red verify that does not finish is reported, not raced", async () => {
   const ctx = await setup();
   await changeApp(ctx.repo, "broken\n");

@@ -11,7 +11,7 @@ import { runPick } from "../scripts/race-pick.mjs";
 import { runRace } from "../scripts/race.mjs";
 import { buildBrief } from "../scripts/lib/brief.mjs";
 import { explanationChanges, renderComparison } from "../scripts/lib/compare.mjs";
-import { acquireLock, raceDir, readLock, releaseLock } from "../scripts/lib/lock.mjs";
+import { acquireLock, lockPath, raceDir, readLock, releaseLock, stateDir } from "../scripts/lib/lock.mjs";
 import { addWorktree, worktreePath } from "../scripts/lib/race-support.mjs";
 import { classifyRed } from "../scripts/lib/summary.mjs";
 
@@ -218,6 +218,7 @@ test("race:close keeps the records of a green race that is closed without a pick
   assert.equal(await runClose({ number: "0001", log: () => {} }), 0);
   assert.match(git(ctx.repo, ["show", "race/0001-report:reports/races/0001/comparison.md"]), /# Race 0001 comparison/);
 });
+
 test("a red that is not an app fault does not start a race", async () => {
   const ctx = await setup({ family: "automation_bug" });
   const { code, lines } = await startRace(ctx, { a: "green" });
@@ -304,6 +305,30 @@ test("race:close clears a race waiting for a pick and refuses a race that is sti
   await acquireLock(2, "x".repeat(40));
   assert.equal(await runClose({ number: "0002", log: () => {} }), 2);
   await releaseLock();
+});
+
+// A racing lock left by a race process that has exited, as a machine restart leaves it.
+async function writeStaleLock(raceId) {
+  const exited = spawnSync(process.execPath, ["-e", ""]).pid;
+  await mkdir(stateDir(), { recursive: true });
+  await writeFile(lockPath(), `${JSON.stringify({ raceId, head: "e".repeat(40), state: "racing", pid: exited }, null, 2)}\n`);
+}
+
+test("a race whose process has exited does not block the next race", async () => {
+  const ctx = await setup();
+  await writeStaleLock(5);
+  const { code, lines } = await startRace(ctx, { a: "green" });
+  assert.equal(code, 0);
+  assert.match(lines.join("\n"), /stopped before it finished/);
+  assert.equal((await readLock()).raceId, 1);
+  await releaseLock();
+});
+
+test("race:close clears the lock of a race that stopped", async () => {
+  await setup();
+  await writeStaleLock(4);
+  assert.equal(await runClose({ number: "0004", log: () => {} }), 0);
+  assert.equal(await readLock(), null);
 });
 
 test("classifyRed starts a race only for an app fault or fixable drift", () => {

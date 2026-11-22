@@ -14,7 +14,7 @@ The builder is the agent that changes the app for the owner.
 
 - Change the code under `app/`. For each function you change, run `npm run explain -- <file> <name> "<one or two sentences>"`, then run `npm run drift`. Commit the app change and its explanation update in one commit.
 - Do not edit `flows/`, `reports/`, `scripts/`, `.factory/`, or `AGENTS.md`.
-- Do not change `app/` or `explain/` while a race holds the lock. The lock is the file `~/.why-it-broke/race.lock`.
+- Do not change `app/` or `explain/` while a race holds the lock. The lock is the file `~/.why-it-broke/race.lock`. A lock whose race has stopped does not count as held.
 - Commit before your turn ends. The Stop hook asks for a commit if `app/` or `explain/` has uncommitted changes. Once the change is committed, the hook runs `npm run verify`. If the hook did not run, run `npm run verify` yourself and wait for it to finish.
 - If verify is red, stop. Do not fix your own change, and do not change `app/` or `explain/` again until the owner acts.
 

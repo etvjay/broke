@@ -7,7 +7,7 @@ import { DROID_BIN, RACER_TIMEOUT_MS, ROOT, VERIFY_SCRIPT } from "./config.mjs";
 import { buildBrief } from "./lib/brief.mjs";
 import { explanationChanges, failuresOf, renderComparison } from "./lib/compare.mjs";
 import { COAUTHOR, git } from "./lib/git.mjs";
-import { acquireLock, raceDir, racesDir, readLock, releaseLock, setLockState } from "./lib/lock.mjs";
+import { acquireLock, isStaleLock, raceDir, racesDir, readLock, releaseLock, setLockState } from "./lib/lock.mjs";
 import { padNumber } from "./lib/report.mjs";
 import {
   addWorktree,
@@ -35,7 +35,12 @@ export async function runRace({
   racerTimeoutMs = RACER_TIMEOUT_MS,
   log = () => {}
 } = {}) {
-  const held = await readLock();
+  let held = await readLock();
+  if (isStaleLock(held)) {
+    log(`race ${padNumber(held.raceId)} stopped before it finished (process ${held.pid} has exited). Its lock is cleared.`);
+    await releaseLock();
+    held = null;
+  }
   if (held !== null) {
     log(`refused: race ${padNumber(held.raceId)} holds the lock (state ${held.state}). Finish it with npm run race:pick or npm run race:close.`);
     return 2;

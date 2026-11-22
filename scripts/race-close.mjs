@@ -1,10 +1,11 @@
 import { pathToFileURL } from "node:url";
 import { parseArgs } from "node:util";
-import { lockPath, readLock, releaseLock } from "./lib/lock.mjs";
+import { isStaleLock, lockPath, raceDir, readLock, releaseLock } from "./lib/lock.mjs";
 import { reportBranchName } from "./lib/race-support.mjs";
 import { padNumber } from "./lib/report.mjs";
 
-// Clears the lock of a race that has green attempts and no pick. Worktrees and branches stay.
+// Clears the lock of a race that has green attempts and no pick, or of a race that stopped.
+// Worktrees and branches stay.
 export async function runClose({ number, log = () => {} }) {
   const raceNumber = Number(number);
   const n = padNumber(raceNumber);
@@ -17,11 +18,16 @@ export async function runClose({ number, log = () => {} }) {
     log(`refused: race ${padNumber(lock.raceId)} holds the lock, not race ${n}.`);
     return 2;
   }
-  if (lock.state !== "awaiting-pick") {
-    log(`refused: race ${n} is ${lock.state}. Close a race only after its racers finish. If no racer runs, remove ${lockPath()} by hand.`);
+  const stopped = isStaleLock(lock);
+  if (lock.state !== "awaiting-pick" && !stopped) {
+    log(`refused: race ${n} is ${lock.state}, and its process is still running. Close a race only after its racers finish. If you are sure no race runs, remove ${lockPath()} by hand.`);
     return 2;
   }
   await releaseLock();
+  if (stopped) {
+    log(`Closed race ${n}, which stopped before it finished. Its records stay in ${raceDir(raceNumber)}, and its worktrees and branches stay for inspection.`);
+    return 0;
+  }
   log(`Closed race ${n} without a pick. Its records are on ${reportBranchName(raceNumber)}. Its worktrees and branches stay for inspection.`);
   return 0;
 }

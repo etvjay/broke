@@ -21,11 +21,12 @@ export function raceDir(number) {
   return join(racesDir(), padNumber(number));
 }
 
-// Creates the lock only when none exists. Returns false when a race holds it.
+// Creates the lock only when none exists. Returns false when a race holds it. The lock names
+// the process that holds it, so a race that stopped can be told from one still running.
 export async function acquireLock(raceId, head) {
   await mkdir(stateDir(), { recursive: true });
   try {
-    await writeFile(lockPath(), `${JSON.stringify({ raceId, head, state: "racing" }, null, 2)}\n`, { flag: "wx" });
+    await writeFile(lockPath(), `${JSON.stringify({ raceId, head, state: "racing", pid: process.pid }, null, 2)}\n`, { flag: "wx" });
     return true;
   } catch (error) {
     if (error.code === "EEXIST") return false;
@@ -50,4 +51,20 @@ export async function setLockState(state) {
 
 export async function releaseLock() {
   await rm(lockPath(), { force: true });
+}
+
+// A racing lock whose process has exited: the race stopped, for example when the machine restarted.
+// An awaiting-pick lock is never stale, because the owner decides what happens to it.
+export function isStaleLock(lock) {
+  return lock !== null && lock.state === "racing" && !processAlive(lock.pid);
+}
+
+function processAlive(pid) {
+  if (!Number.isInteger(pid) || pid <= 0) return false;
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (error) {
+    return error.code === "EPERM";
+  }
 }
