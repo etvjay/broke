@@ -1,0 +1,10 @@
+{
+  "kind": "assert",
+  "status": "passed",
+  "summary": "assert: the message \"You already voted on this poll.\" appears under the poll.",
+  "duration_ms": 7.7,
+  "url": "http://localhost:43525/",
+  "action_id": "289909b5-27da-4c68-b72a-58784cde4d77",
+  "ordinal": 14,
+  "id": "0-14"
+}

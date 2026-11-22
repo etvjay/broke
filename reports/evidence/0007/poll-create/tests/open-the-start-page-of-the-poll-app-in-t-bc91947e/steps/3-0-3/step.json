@@ -1,0 +1,16 @@
+{
+  "kind": "type",
+  "status": "passed",
+  "summary": "type: Typing the poll question: Lunch spot?",
+  "duration_ms": 6042.4,
+  "url": "http://localhost:34827/",
+  "action_id": "30c371eb-92d6-4510-8ed7-b352d3948d39",
+  "element_rect": {
+    "x": 667,
+    "y": 137,
+    "width": 586,
+    "height": 19
+  },
+  "ordinal": 3,
+  "id": "0-3"
+}

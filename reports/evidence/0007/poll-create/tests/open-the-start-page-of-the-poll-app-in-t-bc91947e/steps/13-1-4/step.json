@@ -1,0 +1,16 @@
+{
+  "kind": "type",
+  "status": "passed",
+  "summary": "type: Typing Yes into the poll options field",
+  "duration_ms": 5209.2,
+  "url": "http://localhost:34827/",
+  "action_id": "8d794672-a8cc-4a97-839c-bd2e177bfa6d",
+  "element_rect": {
+    "x": 666,
+    "y": 206,
+    "width": 588,
+    "height": 57
+  },
+  "ordinal": 13,
+  "id": "1-4"
+}
