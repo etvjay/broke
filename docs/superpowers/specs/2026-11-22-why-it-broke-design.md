@@ -232,7 +232,7 @@ The builder check raised five gaps. I settled each one as a call, and each is ma
 - Striptease: the skeleton view is folded into the explainer as collapsed source in each trace entry. It does not claim to catch bugs.
 - CodeGraph: the impact view is observed, not predicted. It shows which flows ran each function and flags changed functions that no flow ran.
 - The poll app is the demo subject.
-- The verified-receipts design and plan are marked superseded at the top. Their receipt chain and verifier are dropped.
+- The verified-receipts design and plan were removed from the tree. They remain in history at e04b168. Their receipt chain and verifier are dropped.
 
 ## Left to the builder
 
