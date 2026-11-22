@@ -1,3 +1,6 @@
+import { readdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { redact, scanSecrets } from "../scripts/lib/redact.mjs";
@@ -89,4 +92,26 @@ test("a Kane log line keeps its keys, and loses the account name, account IDs, a
   assert.match(out, /"duration_ms":264/);
   assert.deepEqual(scanSecrets(log).sort(), ["account id", "account name", "share token"]);
   assert.deepEqual(scanSecrets(out), []);
+});
+
+test("a YAML result keeps its keys, and loses the account name and org ID", () => {
+  const result = "org_id: '1234567'\nuser_name: fixture-user\nproject_id: PROJECT1";
+  const out = redact(result);
+  assert.equal(out, "org_id: '<account-id>'\nuser_name: <account>\nproject_id: PROJECT1");
+  assert.deepEqual(scanSecrets(result).sort(), ["account id", "account name"]);
+  assert.deepEqual(scanSecrets(out), []);
+});
+
+test("committed Kane evidence passes the second scan", () => {
+  const root = fileURLToPath(new URL("../reports/evidence", import.meta.url));
+  const found = [];
+  const walk = (dir) => {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      const path = join(dir, entry.name);
+      if (entry.isDirectory()) walk(path);
+      else for (const kind of scanSecrets(readFileSync(path, "utf8"))) found.push(`${path.slice(root.length + 1)}: ${kind}`);
+    }
+  };
+  walk(root);
+  assert.deepEqual(found, []);
 });

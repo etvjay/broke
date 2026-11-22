@@ -15,8 +15,10 @@ const HAR_HEADER = /("name"\s*:\s*"(?:proxy-authorization|authorization|set-cook
 // test summary, so it goes. Project and test-case IDs stay.
 const SHARE_PATH = /(\/share\/)[A-Za-z0-9_-]{8,}/g;
 const SHARE_ID = /\bUS_[A-Za-z0-9]{16,}\b/g;
-const ACCOUNT_NAME = /("(?:tms_user|username)"\s*:\s*")(?!<account>")[^"\r\n]*"/g;
+const ACCOUNT_NAME = /("(?:tms_user|username|user_name)"\s*:\s*")(?!<account>")[^"\r\n]*"/g;
 const ACCOUNT_ID = /("(?:org_id|user_id)"\s*:\s*)"?\d+"?/g;
+const ACCOUNT_NAME_YAML = /(\b(?:user_name|username|tms_user)\s*:[ \t]*)(?!['"]?<account>)(["']?)[^"'\s][^"'\r\n]*\2/g;
+const ACCOUNT_ID_YAML = /(\b(?:org_id|user_id)\s*:[ \t]*)(['"]?)\d+\2/g;
 
 // A dotted number right after one slash is a version (HeadlessChrome/157.0.0.0),
 // so it stays. An address after "//" in a URL still counts.
@@ -31,7 +33,9 @@ const REDACTIONS = [
   { kind: "share token", pattern: SHARE_PATH, replace: "$1<share-token>" },
   { kind: "share token", pattern: SHARE_ID, replace: "<share-token>" },
   { kind: "account name", pattern: ACCOUNT_NAME, replace: "$1<account>\"" },
-  { kind: "account id", pattern: ACCOUNT_ID, replace: "$1\"<account-id>\"" }
+  { kind: "account id", pattern: ACCOUNT_ID, replace: "$1\"<account-id>\"" },
+  { kind: "account name", pattern: ACCOUNT_NAME_YAML, replace: "$1$2<account>$2" },
+  { kind: "account id", pattern: ACCOUNT_ID_YAML, replace: "$1$2<account-id>$2" }
 ];
 
 // Shapes that must never be copied. redact() leaves them, so a match blocks the file.

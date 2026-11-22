@@ -9,10 +9,10 @@ external_id:
   testcase_id: 01M81MP3ANEC6TP496T7MPX475
   project_id: 01M0HVQ571X8ARVW8V01B9FXH5
   folder_id: 01M0J0NKJF28RDJD0J364SHW7G
-  org_id: '3283978'
-  user_name: supremacy817
+  org_id: '<account-id>'
+  user_name: <account>
   user_email: <email>
-  sharable_link: https://test-manager.lambdatest.com/projects/01M0HVQ571X8ARVW8V01B9FXH5/test-cases/01M81MP3ANEC6TP496T7MPX475/dashboard/share/US_A8WW70NJ243FJ3ZSV12AS545QVAOZUPPO8YFXYLNZRT0L2VEUHK739O6OPH5WOV5?type=summary&agentView=true&fqdn=summary-page
+  sharable_link: https://test-manager.lambdatest.com/projects/01M0HVQ571X8ARVW8V01B9FXH5/test-cases/01M81MP3ANEC6TP496T7MPX475/dashboard/share/<share-token>?type=summary&agentView=true&fqdn=summary-page
   execution_id: ce36a95b-7ed9-455e-8eb6-9cc1e5f70eb1
 environment:
   model: v16-alpha
