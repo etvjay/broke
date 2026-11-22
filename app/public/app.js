@@ -4,9 +4,23 @@ const createStatus = document.getElementById("create-status");
 const voteMessages = new Map();
 
 async function loadPolls() {
-  const response = await fetch("/api/polls");
-  const body = await response.json();
+  let body;
+  try {
+    const response = await fetch("/api/polls");
+    if (!response.ok) throw new Error(`poll list answered ${response.status}`);
+    body = await response.json();
+  } catch {
+    showListError();
+    return;
+  }
   pollList.replaceChildren(...body.polls.map(renderPoll));
+}
+
+function showListError() {
+  const notice = document.createElement("p");
+  notice.className = "status error";
+  notice.textContent = "Could not load the poll list. Refresh the page to try again.";
+  pollList.replaceChildren(notice);
 }
 
 function renderPoll(poll) {
