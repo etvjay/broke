@@ -11,6 +11,13 @@ const BEARER = /(\bBearer[ \t]+)(?!<redacted>)([A-Za-z0-9._~+\/=-]+)/gi;
 // HAR header pairs, such as {"name": "Cookie", "value": "..."}.
 const HAR_HEADER = /("name"\s*:\s*"(?:proxy-authorization|authorization|set-cookie|cookie|x-api-key)"\s*,\s*"value"\s*:\s*)(?!"<redacted>")("[^"\r\n]*")/gi;
 
+// LambdaTest share links and the account behind them. A share token opens a
+// test summary, so it goes. Project and test-case IDs stay.
+const SHARE_PATH = /(\/share\/)[A-Za-z0-9_-]{8,}/g;
+const SHARE_ID = /\bUS_[A-Za-z0-9]{16,}\b/g;
+const ACCOUNT_NAME = /("(?:tms_user|username)"\s*:\s*")(?!<account>")[^"\r\n]*"/g;
+const ACCOUNT_ID = /("(?:org_id|user_id)"\s*:\s*)"?\d+"?/g;
+
 // A dotted number right after one slash is a version (HeadlessChrome/157.0.0.0),
 // so it stays. An address after "//" in a URL still counts.
 const REDACTIONS = [
@@ -20,7 +27,11 @@ const REDACTIONS = [
   { kind: "profile name", pattern: /\bjay\b/gi, replace: "<profile>" },
   { kind: "auth value", pattern: AUTH_HEADER, replace: (match, head, value) => `${head}${value.startsWith('"') ? `"${REDACTED}"` : REDACTED}` },
   { kind: "auth value", pattern: BEARER, replace: `$1${REDACTED}` },
-  { kind: "auth value", pattern: HAR_HEADER, replace: `$1"${REDACTED}"` }
+  { kind: "auth value", pattern: HAR_HEADER, replace: `$1"${REDACTED}"` },
+  { kind: "share token", pattern: SHARE_PATH, replace: "$1<share-token>" },
+  { kind: "share token", pattern: SHARE_ID, replace: "<share-token>" },
+  { kind: "account name", pattern: ACCOUNT_NAME, replace: "$1<account>\"" },
+  { kind: "account id", pattern: ACCOUNT_ID, replace: "$1\"<account-id>\"" }
 ];
 
 // Shapes that must never be copied. redact() leaves them, so a match blocks the file.

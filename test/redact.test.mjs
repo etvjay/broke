@@ -66,3 +66,27 @@ test("a browser version after a slash is not read as an address, but an address 
   assert.deepEqual(scanSecrets(ua), []);
   assert.equal(redact("GET http://203.0.113.42:3100/ HTTP/1.1"), "GET http://<ip>:3100/ HTTP/1.1");
 });
+
+test("a share link keeps its project and test case, and loses its token", () => {
+  const link = "https://test-manager.lambdatest.com/projects/PROJECT1/test-cases/CASE1/dashboard/share/US_FIXTURETOKEN0123456789ABCDEF?type=summary";
+  assert.equal(redact(link), "https://test-manager.lambdatest.com/projects/PROJECT1/test-cases/CASE1/dashboard/share/<share-token>?type=summary");
+  assert.deepEqual(scanSecrets(redact(link)), []);
+});
+
+test("a Kane log line keeps its keys, and loses the account name, account IDs, and share ID", () => {
+  const log = [
+    'Share link auth config {"resolver":true,"fallback_auth_type":"basic","tms_user":"fixture-user"}',
+    'Auth resolved {"username":"fixture-user","org_id":1234567,"user_id":7654321}',
+    'Share link generated {"share_id":"US_FIXTURETOKEN0123456789ABCDEF","duration_ms":264}'
+  ].join("\n");
+  const out = redact(log);
+  for (const value of ["fixture-user", "1234567", "7654321", "US_FIXTURETOKEN"]) assert.equal(out.includes(value), false, `still has ${value}`);
+  assert.match(out, /"tms_user":"<account>"/);
+  assert.match(out, /"username":"<account>"/);
+  assert.match(out, /"org_id":"<account-id>"/);
+  assert.match(out, /"user_id":"<account-id>"/);
+  assert.match(out, /"share_id":"<share-token>"/);
+  assert.match(out, /"duration_ms":264/);
+  assert.deepEqual(scanSecrets(log).sort(), ["account id", "account name", "share token"]);
+  assert.deepEqual(scanSecrets(out), []);
+});
