@@ -1,0 +1,16 @@
+{
+  "kind": "type",
+  "status": "passed",
+  "summary": "type: Type \"Only one?\" into \"Question\"",
+  "duration_ms": 126.6,
+  "url": "http://localhost:43891/",
+  "action_id": "b18f1e2c-e2ec-4959-854f-7c28e12e0613",
+  "element_rect": {
+    "x": 667,
+    "y": 137,
+    "width": 586,
+    "height": 19
+  },
+  "ordinal": 10,
+  "id": "1-2"
+}

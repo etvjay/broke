@@ -1,0 +1,16 @@
+{
+  "kind": "type",
+  "status": "passed",
+  "summary": "type: Typing Question text in the poll form",
+  "duration_ms": 7626.9,
+  "url": "http://localhost:43891/",
+  "action_id": "3f2ccdd8-a898-48c0-88f9-682ff18fae3b",
+  "element_rect": {
+    "x": 667,
+    "y": 137,
+    "width": 586,
+    "height": 19
+  },
+  "ordinal": 2,
+  "id": "0-2"
+}

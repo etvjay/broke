@@ -1,0 +1,16 @@
+{
+  "kind": "click",
+  "status": "passed",
+  "summary": "click: Clicking the Vote button next to Green in the Best tea poll",
+  "duration_ms": 5265.1,
+  "url": "http://localhost:38501/",
+  "action_id": "155f66cf-b0f8-4a90-8475-a5474b1405b0",
+  "element_rect": {
+    "x": 1212,
+    "y": 477,
+    "width": 35,
+    "height": 19
+  },
+  "ordinal": 8,
+  "id": "1-1"
+}
