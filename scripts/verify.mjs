@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, readFile, readdir, realpath, rm, writeFile } from "node:fs/promises";
+import { access, mkdir, mkdtemp, readFile, readdir, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -17,11 +17,28 @@ import { classifyRun, runKane } from "./lib/kane.mjs";
 import { redact, redactFields, scanSecrets } from "./lib/redact.mjs";
 import { padNumber, renderReport } from "./lib/report.mjs";
 import { buildSummary } from "./lib/summary.mjs";
+import { acquireVerifyLock, releaseVerifyLock } from "./lib/verify-lock.mjs";
 
 // Exit codes: 0 all flows pass and drift passes; 1 a flow fails or drift fails;
 // 2 an error (refused run, app did not start, no run_end, missing coverage).
 // With attemptOut, the report and summary are written there and nothing is committed.
-export async function runVerify({
+export async function runVerify(options = {}) {
+  const { root = ROOT, attemptOut = null, log = () => {} } = options;
+  // A racer attempt writes outside the repo and commits nothing, so attempts run without the lock.
+  if (attemptOut !== null) return verifyOnce(options);
+  const lock = await acquireVerifyLock(root);
+  if (lock.held) {
+    log(`refused: another verify holds ${lock.file}. If no verify is running, delete that file and run verify again.`);
+    return 2;
+  }
+  try {
+    return await verifyOnce(options);
+  } finally {
+    await releaseVerifyLock(lock.file);
+  }
+}
+
+async function verifyOnce({
   root = ROOT,
   kaneBin = KANE_BIN,
   kaneEnv = {},
@@ -92,6 +109,10 @@ export async function runVerify({
     await writeAttempt(outDir, { markdown, summaryJson });
     log(`report: ${join(outDir, "report.md")} written. Nothing is committed.`);
   } else {
+    if (await numberTaken(root, number)) {
+      log(`refused: report ${padNumber(number)} or its evidence folder already exists, so nothing was written or committed. Move the leftover files out of reports/, then run verify again.`);
+      return 2;
+    }
     const evidenceDirs = await writeEvidence(join(root, "reports"), flows);
     await commitReport({ root, number, head, markdown, summaryJson, evidenceDirs });
     log(`report: reports/${padNumber(number)}.md committed`);
@@ -237,6 +258,22 @@ function exitCodeFor(flows, drift) {
   if (flows.some((flow) => flow.outcome === "error")) return 2;
   if (flows.some((flow) => flow.outcome === "fail") || !drift.ok) return 1;
   return 0;
+}
+
+// True when a report or an evidence folder already has this number. A commit would overwrite it.
+async function numberTaken(root, number) {
+  const pad = padNumber(number);
+  return (await exists(join(root, "reports", `${pad}.md`))) || (await exists(join(root, "reports", "evidence", pad)));
+}
+
+async function exists(path) {
+  try {
+    await access(path);
+    return true;
+  } catch (error) {
+    if (error.code === "ENOENT") return false;
+    throw error;
+  }
 }
 
 async function nextReportNumber(reportsDir) {

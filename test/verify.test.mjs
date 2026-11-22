@@ -1,6 +1,6 @@
 import { after, test } from "node:test";
 import assert from "node:assert/strict";
-import { execFile } from "node:child_process";
+import { execFile, spawnSync } from "node:child_process";
 import { cp, mkdir, mkdtemp, readFile, readdir, rm, symlink, writeFile } from "node:fs/promises";
 import { createServer as createHttpServer } from "node:http";
 import { tmpdir } from "node:os";
@@ -188,6 +188,49 @@ test("verify refuses without a git identity and names the git config commands", 
   assert.match(lines.join("\n"), /git config user\.name "Your Name"/);
   assert.match(lines.join("\n"), /git config user\.email "you@example\.com"/);
   await assertNoReports(root);
+});
+
+const verifyLock = (root) => join(root, ".git", "why-it-broke-verify.lock");
+
+test("a commit-mode verify refuses while another live verify holds the lock", { timeout: 120000 }, async () => {
+  const root = await makeRepo();
+  const other = { pid: process.pid, startedAt: "2026-11-22T13:51:31.000Z" };
+  await writeFile(verifyLock(root), `${JSON.stringify(other)}\n`);
+  const lines = [];
+  assert.equal(await runVerify({ root, kaneBin: FAKE_KANE, kaneEnv: scenario("pass"), log: (line) => lines.push(line) }), 2);
+  assert.match(lines.join("\n"), /another verify holds/);
+  await assertNoReports(root);
+  assert.deepEqual(JSON.parse(await readFile(verifyLock(root), "utf8")), other);
+});
+
+test("a lock left by a verify that has exited is cleared, and the lock is released after a commit", { timeout: 120000 }, async () => {
+  const root = await makeRepo();
+  const exited = spawnSync(process.execPath, ["-e", ""]);
+  await writeFile(verifyLock(root), `${JSON.stringify({ pid: exited.pid, startedAt: "2026-11-22T13:00:00.000Z" })}\n`);
+  assert.equal(await runVerify({ root, kaneBin: FAKE_KANE, kaneEnv: scenario("pass") }), 0);
+  await assert.rejects(readFile(verifyLock(root)), { code: "ENOENT" });
+});
+
+test("a racer attempt takes no lock, so attempts can run beside a held lock", { timeout: 120000 }, async () => {
+  const root = await makeRepo();
+  const held = `${JSON.stringify({ pid: process.pid, startedAt: "2026-11-22T13:51:31.000Z" })}\n`;
+  await writeFile(verifyLock(root), held);
+  const out = await mkdtemp(join(tmpdir(), "wib-attempt-"));
+  temps.push(out);
+  const attemptOut = join(out, "b");
+  assert.equal(await runVerify({ root, kaneBin: FAKE_KANE, kaneEnv: scenario("pass"), attemptOut, label: "race 0001 attempt b" }), 0);
+  assert.equal(await readFile(verifyLock(root), "utf8"), held);
+});
+
+test("a report number taken during the run stops verify before it writes evidence", { timeout: 120000 }, async () => {
+  const root = await makeRepo();
+  const head = (await git(root, ["rev-parse", "HEAD"])).trim();
+  const packPath = await writePack();
+  const kaneEnv = { FAKE_KANE_SCENARIO: "pass", FAKE_KANE_PACK: packPath, FAKE_KANE_CLAIM: reportPath(root) };
+  assert.equal(await runVerify({ root, kaneBin: FAKE_KANE, kaneEnv }), 2);
+  assert.equal((await git(root, ["rev-parse", "HEAD"])).trim(), head);
+  await assert.rejects(readdir(join(root, "reports", "evidence")), { code: "ENOENT" });
+  await assert.rejects(readFile(verifyLock(root)), { code: "ENOENT" });
 });
 
 test("classifyRun: passed with exit 0 is a pass", () => {

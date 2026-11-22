@@ -59,7 +59,7 @@ export function isStaleLock(lock) {
   return lock !== null && lock.state === "racing" && !processAlive(lock.pid);
 }
 
-function processAlive(pid) {
+export function processAlive(pid) {
   if (!Number.isInteger(pid) || pid <= 0) return false;
   try {
     process.kill(pid, 0);

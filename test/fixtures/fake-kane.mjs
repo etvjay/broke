@@ -1,6 +1,9 @@
 #!/usr/bin/env node
 // Test double for kane-cli. FAKE_KANE_SCENARIO picks the outcome:
 // pass (default), fail, no-run-end, or low-credits (balance only).
+// FAKE_KANE_CLAIM, when set, writes that file during the run, as another verify does.
+import { mkdirSync, writeFileSync } from "node:fs";
+import { dirname } from "node:path";
 const scenario = process.env.FAKE_KANE_SCENARIO || "pass";
 const args = process.argv.slice(2);
 const JSON_HEADERS = { "content-type": "application/json" };
@@ -34,6 +37,10 @@ async function run() {
   const url = args[args.indexOf("--url") + 1];
   emit({ type: "stream_start" });
   const checked = await exerciseApp(url);
+  if (process.env.FAKE_KANE_CLAIM) {
+    mkdirSync(dirname(process.env.FAKE_KANE_CLAIM), { recursive: true });
+    writeFileSync(process.env.FAKE_KANE_CLAIM, "# claimed by another verify\n");
+  }
   emit({ step: 1, status: "done", remark: "opened the start page" });
   emit({ step: 2, status: "done", remark: "created a poll" });
   emit({ step: 3, status: checked ? "done" : "failed", remark: "voted" });
