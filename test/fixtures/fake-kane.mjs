@@ -51,7 +51,7 @@ async function run() {
       type: "run_end",
       status: "failed",
       credits_consumed: 1.1,
-      verdict: { confirmed: true, status: "failed", family: "app_bug", category: "functional", severity: "high", root_cause: process.env.FAKE_KANE_ROOT_CAUSE || "The vote count did not change", agent_fault_assessment: "app", confidence: 0.8, suggestion: "Check castVote", one_liner: "Vote did not count", culprit_step: 3, relevant_steps: [3], mode: "agent" }
+      verdict: { confirmed: true, status: "failed", family: "application_issue", category: "functional", severity: "high", root_cause: process.env.FAKE_KANE_ROOT_CAUSE || "The vote count did not change", agent_fault_assessment: "app", confidence: 0.8, suggestion: "Check castVote", one_liner: "Vote did not count", culprit_step: 3, relevant_steps: [3], mode: "agent" }
     });
     return finish(1);
   }

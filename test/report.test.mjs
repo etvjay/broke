@@ -44,7 +44,7 @@ const failFlow = {
   outcome: "fail",
   reason: "Vote did not count",
   verdict: {
-    family: "app_bug",
+    family: "application_issue",
     category: "functional",
     root_cause: "The vote count did not change",
     suggestion: "Check castVote",
@@ -90,7 +90,7 @@ test("a failed flow shows Kane's root cause, suggestion, and fault assessment", 
   assert.match(body, /- Root cause: The vote count did not change/);
   assert.match(body, /- Suggestion: Check castVote/);
   assert.match(body, /- Fault assessment: app/);
-  assert.match(body, /- Family: app_bug/);
+  assert.match(body, /- Family: application_issue/);
   assert.match(body, /- Confidence: 0\.8/);
 });
 

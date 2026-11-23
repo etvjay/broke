@@ -2,7 +2,7 @@
 // Test double for verify.mjs. The result is the first line of app/fix.txt in the tree
 // it verifies: green exits 0, red exits 1, anything else exits 2. A pick's merged tree
 // (its worktree is named why-it-broke-pick-*) uses FAKE_PICK_VERIFY when it is set.
-// FAKE_VERIFY_FAMILY sets the family Kane gives a failing flow (default app_bug).
+// FAKE_VERIFY_FAMILY sets the family Kane gives a failing flow (default application_issue).
 // Like verify.mjs: an attempt run (--attempt-out) writes its summary and report there
 // and commits nothing; a normal run writes NNNN.md and NNNN.json and commits both.
 import { execFileSync } from "node:child_process";
@@ -33,7 +33,7 @@ const summaryFor = (number) => ({
   number,
   testedCommit: head,
   outcome,
-  flows: [{ name: "poll-vote.md", outcome, reason: `fake ${result}`, verdict: code === 1 ? { family: process.env.FAKE_VERIFY_FAMILY ?? "app_bug", root_cause: "fake root cause" } : null, trace: [] }],
+  flows: [{ name: "poll-vote.md", outcome, reason: `fake ${result}`, verdict: code === 1 ? { family: process.env.FAKE_VERIFY_FAMILY ?? "application_issue", root_cause: "fake root cause" } : null, trace: [] }],
   drift: { ok: code === 0, skipped: false, problems: [] }
 });
 

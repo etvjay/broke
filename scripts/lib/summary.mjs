@@ -48,7 +48,8 @@ export function classifyRed(summary) {
     return { race: false, reason: `${unrun.file} ${unrun.name} ran in no flow. Racers cannot add flows, so the owner decides.` };
   }
   const failing = summary.flows.filter((flow) => flow.outcome === "fail");
-  const notApp = failing.find((flow) => flow.verdict?.family !== "app_bug");
+  // Kane files a defect in the product as application_issue. A defect in the test is automation_bug.
+  const notApp = failing.find((flow) => flow.verdict?.family !== "application_issue");
   if (notApp) {
     return {
       race: false,

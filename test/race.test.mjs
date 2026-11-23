@@ -41,7 +41,7 @@ function isAncestor(cwd, ancestor, descendant) {
   }
 }
 
-function redSummary(testedCommit, family = "app_bug") {
+function redSummary(testedCommit, family = "application_issue") {
   return {
     number: 1,
     testedCommit,
@@ -63,7 +63,7 @@ function redSummary(testedCommit, family = "app_bug") {
 
 // A repo whose HEAD is a red report commit, the way verify leaves it.
 // The fake racer script is copied into the temp folder, so the repo sees no mode change.
-async function setup({ family = "app_bug", extraCommit = false } = {}) {
+async function setup({ family = "application_issue", extraCommit = false } = {}) {
   const dir = await mkdtemp(join(tmpdir(), "wib-race-"));
   temps.push(dir);
   process.env.HOME = join(dir, "home");
@@ -212,7 +212,7 @@ test("with no green attempt the lock is released, main stays put, and the report
   assert.match(lines.join("\n"), /No attempt is green/);
   const shown = git(ctx.repo, ["show", "race/0001-report:reports/races/0001/comparison.md"]);
   assert.match(shown, /# Race 0001 comparison/);
-  assert.match(shown, /poll-vote\.md: app_bug/);
+  assert.match(shown, /poll-vote\.md: application_issue/);
 });
 
 test("green attempts wait for a pick: main does not move and the comparison names no winner", async () => {
@@ -379,12 +379,31 @@ test("classifyRed starts a race only for an app fault or fixable drift", () => {
   assert.equal(classifyRed({ ...base, outcome: "pass" }).race, false);
 });
 
+test("classifyRed starts a race for a product defect that Kane files as application_issue", () => {
+  // Kane's verdict for a double-click that made two identical polls (probe 1, localhost).
+  const verdict = {
+    confirmed: true,
+    status: "failed",
+    family: "application_issue",
+    category: "functional_defect",
+    severity: "major",
+    root_cause: "The Create poll action accepts both parts of a double-click as separate poll creations.",
+    suggestion: "Disable the Create poll button after the first activation until the request finishes.",
+    agent_fault_assessment: "The agent did not cause the incorrect result.",
+    confidence: 0.98,
+    culprit_step: "0-6"
+  };
+  const red = redSummary("c".repeat(40));
+  red.flows = [{ name: "poll-create.md", outcome: "fail", reason: "Two identical polls", verdict, trace: [] }];
+  assert.deepEqual(classifyRed(red), { race: true, reason: "Starts a race: app fault in poll-create.md." });
+});
+
 test("the brief names Kane's verdict, the explained trace, the rules, and earlier failures", () => {
   const brief = buildBrief({
     head: "c".repeat(40),
     summary: redSummary("b".repeat(40)),
     report: "# Why It Broke report 0001\n",
-    priorAttempts: ["race 0001, attempt c: red. poll-vote.md: app_bug, castVote drops the vote"]
+    priorAttempts: ["race 0001, attempt c: red. poll-vote.md: application_issue, castVote drops the vote"]
   });
   assert.match(brief, /Root cause: castVote drops the vote/);
   assert.match(brief, /app\/store\.mjs:1 make \[current\]: Builds the store\./);
