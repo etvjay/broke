@@ -2,7 +2,7 @@
 
 The owner posts these. The agent drafts them. Before posting, replace [REPO_URL] and [VIDEO_URL], and check each number against `reports/`.
 
-## Post 1: short (X or LinkedIn)
+## Post 1: short (X)
 
 I built Why It Broke for the KaneCLI hackathon.
 
@@ -15,7 +15,7 @@ The fix race is built and tested, but it has not run on a real red yet. When it 
 Repo: [REPO_URL]
 Demo: [VIDEO_URL]
 
-## Post 2: longer (dev.to or LinkedIn)
+## Post 2: longer (X thread)
 
 Title: Why It Broke: a failed browser test that says why
 
