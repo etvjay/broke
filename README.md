@@ -14,7 +14,7 @@ Built for the [KaneCLI Online Hackathon](https://www.kaneclihack.sh/) by TestMu 
 - The race gate first checked for `app_bug`. Kane's verdicts use `application_issue`, so a real app fault would not have started a race. The gate now checks `application_issue` (commit `18cb453`). This was fixed before any red run.
 - Committed evidence is text only: network logs, console logs, and failure files. Verify does not copy screenshots into the repo. Kane keeps them in its evidence packs.
 - There is no hosted site. Run the app with `npm start`, or read the reports on GitHub.
-- The repo has no license file yet.
+- The code is MIT licensed. See [LICENSE](LICENSE).
 
 ## What you need
 
