@@ -43,14 +43,14 @@ Check your credits with `kane-cli balance`. Verify stops below 2,000 credits. In
 
 You do not need Kane to read the results. Every verify report is committed on main, and the static report page at [https://etvjay.github.io/broke/](https://etvjay.github.io/broke/) renders them from committed main. A failed race commits its records to main; a sole green attempt merges automatically onto main with its records; a race with two or three green attempts holds its records on branch `race/NNNN-report` until the owner's pick copies them onto main.
 
-## The four flows
+## The flows
 
-Each flow is plain text in `flows/`. Kane runs the text in a real browser against a fresh copy of the app.
+Each flow is plain text in `flows/`. Kane runs the text in a real browser against a fresh copy of the app. Verify runs the first three. The fourth waits for the owner's approval.
 
 - `poll-create` makes the poll "Lunch spot?" with two options. It checks that a poll with one option is refused.
 - `poll-vote` makes the poll "Favourite colour?" and votes Blue. It checks that the count reads Blue (1).
 - `poll-vote-once` makes the poll "Best tea?" and votes Green. It checks that a second vote from the same browser is refused.
-- `poll-create-once` double-clicks Create poll once for "Double click once?" and fails if two or more polls with that question appear.
+- `poll-create-once` (not in verify until the owner approves it) double-clicks Create poll once for "Double click once?" and fails if two or more polls with that question appear.
 
 ## Verify
 
@@ -127,7 +127,7 @@ Only the owner runs these:
 
 ```
 app/        the poll app
-flows/      the four Kane flows and their approvals
+flows/      the Kane flows and their approvals
 explain/    one plain explanation per app function
 reports/    committed verify reports, evidence, and race records
 scripts/    verify, drift, explain, race, site, and the Stop hook
