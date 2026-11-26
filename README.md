@@ -4,7 +4,73 @@ Kane CLI tests a small poll app in a real browser after each change, the way a u
 
 When a run fails, Why It Broke turns it into a report. The report gives Kane's verdict and the app functions that ran on the failing path, each with a plain explanation. When Kane places a fault in the app, three coding agents each try a fix in their own git worktree, and Kane runs the same flows on every attempt. If exactly one fix passes, the runner merges it. If two or three pass, the owner picks one. Only a fix that passes Kane again can merge. The poll app is the subject under test. What the project shows is Kane's verdict and the fix loop that follows it.
 
-Built for the [KaneCLI Online Hackathon](https://www.kaneclihack.sh/) by TestMu AI.
+Built for the [KaneCLI Online Hackathon](https://www.kaneclihack.sh/) by TestMu AI. Live showcase and committed reports: [https://etvjay.github.io/broke/](https://etvjay.github.io/broke/).
+
+## Problem definition
+
+AI coding agents write features and unit tests quickly, pass `npm test`, and still ship real browser bugs: double-click duplicate submissions, DOM/HTTP race conditions, and out-of-date code explanations. Unit tests rarely catch live browser interaction bugs, and when an end-to-end test fails without structured fault attribution, an agent told to make CI green can weaken or rewrite the test instead of fixing the application.
+
+## Solution
+
+**Why It Broke** turns [Kane CLI](https://github.com/LambdaTest/kane-cli) into an independent browser judge and merge gate around a small poll app:
+
+1. **Owner-approved plain-English flows (`flows/`):** Every browser check is written in plain English and locked by a SHA-256 hash in `flows/approvals.json`. Builder and racer agents cannot edit or weaken flows.
+2. **Real-browser verdict + V8 function trace (`npm run verify`):** On every commit, verify boots a fresh app server, runs all four Kane flows in Chromium, collects V8 coverage of every app function that executed on the flow, verifies source-hashed plain-English explanations (`npm run drift`), redacts secrets/emails/paths from Kane's evidence pack, and commits `reports/NNNN.md`, `reports/NNNN.json`, and `reports/evidence/NNNN/`.
+3. **Fault-attributed 3-agent fix race (`npm run race`):** Only when Kane's verdict classifies the failure as an `application_issue` (not a test/flow fault or infrastructure error) does the runner spawn three isolated Factory Droid agents (`a`, `b`, `c`) in separate git worktrees, giving each racer the failing report, V8 trace, and Kane's verdict in `brief.md`.
+4. **Kane-gated merge (`npm run race:pick`):** Kane verifies every racer's commit across all four flows and drift. If one passes, the runner merges it; if two or three pass, the owner compares them and picks one. The merged commit must pass one final full Kane verification pass before `main` advances.
+
+## Why it broke: full case study (0009 -> race 0001 -> 0010)
+
+### 1. The bug (what broke and why)
+
+On commit `b35d27f`, all 166 unit tests passed, yet double-clicking **Create poll** created two identical polls in the list. The client form handler in `app/public/app.js` had no in-flight or button-disable guard, and `POST /api/polls` in `app/server.mjs` / `app/store.mjs` had no idempotency key, so both clicks of a single double-click reached the server `0.58 ms` apart and saved two separate polls.
+
+### 2. Where Kane CLI helped and solved the issue
+
+- **Caught what unit tests missed:** Running `poll-create-once.md` in a real browser in report [0009](reports/0009.md) reproduced the duplicate poll creation that unit tests never triggered.
+- **Triaged root cause with 0.98 confidence:** Kane returned `family: application_issue`, `category: functional_defect`, `severity: major`, `confidence: 0.98`, `culprit_step: 0-6`, and explicitly cleared the test agent in `agent_fault_assessment` (*"The agent followed the requested double-click interaction... The product should prevent a rapid repeated activation from making duplicate polls"*).
+- **Provided the exact diagnosis and suggested fix:** Kane flagged two signals (`step 0-6 [network_failure]: POST http://localhost:42417/api/polls -> 201` and `step 0-9 [objective_contradiction]`) and suggested: *"Disable or debounce Create poll as soon as it is pressed, and have the server reject duplicate rapid submissions so a double-click can create only one poll."*
+- **Drove and judged the 3-agent fix race:** Kane's verdict and the 36-function V8 trace fed directly into [reports/races/0001/brief.md](reports/races/0001/brief.md). Three isolated Droid racers built three distinct fixes, and Kane verified all four flows on every attempt:
+  - **Attempt `a` (`f74aeba`, +63/-13, 4/4 pass, drift pass — picked by owner):** Client button disable + `creating` in-flight guard + per-form `submissionId` idempotency key (`201` on new create, `200` on replay via `findSubmission`). No fragile time window.
+  - **Attempt `b` (`51be746`, +43/-3, 4/4 pass, drift pass):** Client button disable + global 2-second duplicate question/options window (`recentDuplicate`).
+  - **Attempt `c` (`107051a`, +58/-17, 4/4 pass, drift pass):** Client disable + `createInFlight` + per-voter 2-second duplicate window.
+- **Proved the fix on `main`:** After picking attempt `a` ([pick.md](reports/races/0001/pick.md)), Kane re-verified the merge commit `cb8d7c4` across all four flows in report [0010](reports/0010.md) (`4/4` pass, drift pass, `73.05` credits) before `main` advanced.
+
+### 3. Committed traces and network HAR proofs
+
+**Before fix — Report [0009](reports/0009.md) (`poll-create-once.md`, FAIL, committed [0-network.har](reports/evidence/0009/poll-create-once/tests/open-the-start-page-of-the-poll-app-in-t-8a7bb2fe/logs/0-network.har)):**
+
+```text
+2026-11-26T11:50:30.362645+00:00  GET   /api/polls -> 200
+2026-11-26T11:50:53.735581+00:00  POST  /api/polls -> 201   (click 1)
+2026-11-26T11:50:53.736164+00:00  POST  /api/polls -> 201   (click 2, +0.58 ms)
+2026-11-26T11:50:53.750384+00:00  GET   /api/polls -> 200
+2026-11-26T11:50:53.755583+00:00  GET   /api/polls -> 200
+```
+
+**After fix — Report [0010](reports/0010.md) (`poll-create-once.md`, PASS, committed [0-network.har](reports/evidence/0010/poll-create-once/tests/open-the-start-page-of-the-poll-app-in-t-98563033/logs/0-network.har)):**
+
+```text
+2026-11-26T12:48:43.134250+00:00  GET   /api/polls -> 200
+2026-11-26T12:49:02.689527+00:00  POST  /api/polls -> 201   (single create; repeat click blocked + submissionId idempotency)
+2026-11-26T12:49:02.702282+00:00  GET   /api/polls -> 200
+```
+
+**Failing-path V8 function trace (36 functions recorded in [0009.md](reports/0009.md)):** `handleRequest` -> `serveRequest` -> `routeRequest` -> `addPollRoute` -> `readJsonBody` -> `runExclusive` -> `addPollTask` -> `loadPolls` -> `createPoll` -> `savePolls` -> `sendJson`. Full per-function explanations and source blocks are in [reports/0009.md](reports/0009.md) and rendered on the [live showcase page](https://etvjay.github.io/broke/#red-run).
+
+**All committed proof artifacts:**
+- Failing verdict & step evidence: [reports/0009.md](reports/0009.md), [reports/0009.json](reports/0009.json), [failure.yaml](reports/evidence/0009/poll-create-once/failure.yaml), [0-actions.ndjson](reports/evidence/0009/poll-create-once/tests/open-the-start-page-of-the-poll-app-in-t-8a7bb2fe/logs/0-actions.ndjson), [0-dag_diagram.md](reports/evidence/0009/poll-create-once/tests/open-the-start-page-of-the-poll-app-in-t-8a7bb2fe/v16-trajectory/0-dag_diagram.md)
+- Race 0001 records: [brief.md](reports/races/0001/brief.md), [comparison.md](reports/races/0001/comparison.md), [attempts.json](reports/races/0001/attempts.json), [pick.md](reports/races/0001/pick.md), and attempt reports [a](reports/races/0001/a/report.md), [b](reports/races/0001/b/report.md), [c](reports/races/0001/c/report.md)
+- Post-merge green proof: [reports/0010.md](reports/0010.md), [reports/0010.json](reports/0010.json), [reports/evidence/0010/](reports/evidence/0010/)
+
+## Tests and verification layers
+
+| Layer | Command | Scope |
+| --- | --- | --- |
+| Real-browser Kane CLI flows | `npm run verify` | 4 owner-approved flows in Chromium (`poll-create`, `poll-vote`, `poll-vote-once`, `poll-create-once`) locked by SHA-256 in `flows/approvals.json` |
+| Unit & harness test suite | `npm test` | **166 passing tests** across 16 files in `test/` (`store`, `server`, `drift`, `explain`, `flows`, `functions`, `evidence`, `redact`, `report`, `verify`, `lock`, `race-support`, `race`, `stop-hook`, `app-process`, `site`) |
+| Explanation & coverage drift | `npm run drift` | AST + SHA-256 verification of all 41 app functions in `app/server.mjs` and `app/store.mjs` against `explain/functions.json` (plus V8 flow coverage check during `verify`) |
+| Redaction & static site check | `npm run site` | Byte-identical static build checked for zero secrets, zero emails, zero `/home/` paths, and zero `<script>` tags |
 
 ## Status
 

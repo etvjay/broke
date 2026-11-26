@@ -354,6 +354,11 @@ test("building site on this repo is byte-identical across runs and contains no s
   assert.match(html1, /application_issue/);
   assert.match(html1, /attempt a/);
   assert.match(html1, /Picked by/);
+  assert.match(html1, /Problem definition &amp; solution/);
+  assert.match(html1, /Where Kane CLI helped &amp; solved the issue/);
+  assert.match(html1, /Before vs\. after network HAR proof/);
+  assert.match(html1, /Tests, flows &amp; verification layers/);
+  assert.match(html1, /0\.58 ms/);
 });
 
 function writeZip(zipPath, entries) {

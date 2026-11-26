@@ -94,12 +94,14 @@ export function renderSite(data) {
     '  <div class="page">',
     renderHeader(repoUrl),
     "    <main>",
-    renderHowItWorks(),
+    renderProblemAndSolution(),
+    renderWhereKaneHelped({ red, race, green, repoUrl }),
     renderLatestStatus(latest, repoUrl),
     renderLoopSection(loop),
     renderRedSection(red, repoUrl),
     renderRaceSection(race, repoUrl),
-    renderGreenSection(green, race, repoUrl),
+    renderGreenSection(green, red, race, repoUrl),
+    renderTestsAndProofs({ runs, red, race, green, repoUrl }),
     renderAllRunsSection(runs, repoUrl),
     "    </main>",
     renderFooter(repoUrl),
@@ -232,6 +234,8 @@ async function loadRedDetail(root, committed, run) {
     const flowBase = flow.name.replace(/\.md$/, "");
     const evidencePrefix = `reports/evidence/${run.pad}/${flowBase}`;
     const failures = await loadFlowFailures(root, committed, evidencePrefix);
+    const networkProof = await loadNetworkProof(root, committed, evidencePrefix);
+    const evidenceLinks = collectEvidenceLinks(committed, evidencePrefix);
     const trace = (flow.trace ?? []).map((entry) => {
       const fnName = entry.name ?? "(anonymous)";
       const key = `${flow.name}::${entry.file}:${entry.line}::${fnName}`;
@@ -241,10 +245,72 @@ async function loadRedDetail(root, committed, run) {
         source: sources.byFlow.get(key) ?? sources.byLocation.get(fallbackKey) ?? null
       };
     });
-    failingFlows.push({ ...flow, failures, trace });
+    failingFlows.push({ ...flow, failures, networkProof, evidenceLinks, trace });
   }
   const featuredImage = findFeaturedImage(committed, run.pad, "red");
   return { ...run, failingFlows, featuredImage };
+}
+
+async function loadNetworkProof(root, committed, evidencePrefix) {
+  const harPath = [...committed]
+    .filter((path) => path.startsWith(`${evidencePrefix}/`) && path.endsWith("/0-network.har"))
+    .sort()[0];
+  if (!harPath) return null;
+  try {
+    const har = JSON.parse(await gitShowText(root, harPath));
+    const entries = (har?.log?.entries ?? [])
+      .map((entry) => {
+        const url = String(entry?.request?.url ?? "");
+        const method = String(entry?.request?.method ?? "");
+        const status = entry?.response?.status ?? null;
+        const started = entry?.startedDateTime ?? null;
+        let pathname = url;
+        try {
+          pathname = new URL(url).pathname;
+        } catch {
+          pathname = url;
+        }
+        return { started, method, pathname, status };
+      })
+      .filter((item) => item.pathname.startsWith("/api/"));
+    const posts = entries.filter((item) => item.method === "POST" && item.pathname === "/api/polls");
+    let postDeltaMs = null;
+    if (posts.length >= 2 && posts[0].started && posts[1].started) {
+      const t0 = Date.parse(posts[0].started);
+      const t1 = Date.parse(posts[1].started);
+      if (Number.isFinite(t0) && Number.isFinite(t1)) {
+        // Compute microsecond delta if ISO strings carry fractional seconds beyond ms.
+        const us0 = parseIsoMicros(posts[0].started);
+        const us1 = parseIsoMicros(posts[1].started);
+        postDeltaMs = us0 !== null && us1 !== null ? (us1 - us0) / 1000 : t1 - t0;
+      }
+    }
+    return { harPath, entries, postCount: posts.length, postDeltaMs };
+  } catch {
+    return null;
+  }
+}
+
+function parseIsoMicros(iso) {
+  const match = /^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})(?:\.(\d+))?(Z|[+-]\d{2}:\d{2})$/.exec(String(iso));
+  if (!match) return null;
+  const baseMs = Date.parse(`${match[1]}${match[3]}`);
+  if (!Number.isFinite(baseMs)) return null;
+  const frac = (match[2] ?? "").padEnd(6, "0").slice(0, 6);
+  return baseMs * 1000 + Number(frac);
+}
+
+function collectEvidenceLinks(committed, evidencePrefix) {
+  const paths = [...committed].filter((path) => path.startsWith(`${evidencePrefix}/`)).sort();
+  const findEnding = (suffix) => paths.find((path) => path.endsWith(suffix)) ?? null;
+  return {
+    dir: paths.length > 0 ? evidencePrefix : null,
+    failureYaml: committed.has(`${evidencePrefix}/failure.yaml`) ? `${evidencePrefix}/failure.yaml` : null,
+    runYaml: committed.has(`${evidencePrefix}/run.yaml`) ? `${evidencePrefix}/run.yaml` : null,
+    networkHar: findEnding("/0-network.har"),
+    actionsNdjson: findEnding("/0-actions.ndjson"),
+    dagDiagram: findEnding("/0-dag_diagram.md")
+  };
 }
 
 async function loadFlowFailures(root, committed, evidencePrefix) {
@@ -279,7 +345,13 @@ async function findGreenAfterPick(root, committed, runs, pick) {
   for (const run of runs) {
     const parents = await gitParents(root, run.testedCommit);
     if (parents.length === 2 && parents[0].startsWith(pick.mainBeforeShort) && parents[1].startsWith(pick.commitShort)) {
-      return { ...run, featuredImage: findFeaturedImage(committed, run.pad, "green") };
+      const networkProofs = {};
+      for (const flow of run.flows) {
+        const flowBase = flow.name.replace(/\.md$/, "");
+        const proof = await loadNetworkProof(root, committed, `reports/evidence/${run.pad}/${flowBase}`);
+        if (proof) networkProofs[flow.name] = proof;
+      }
+      return { ...run, networkProofs, featuredImage: findFeaturedImage(committed, run.pad, "green") };
     }
   }
   return null;
@@ -582,30 +654,92 @@ function renderHeader(repoUrl) {
     `          <a href="${escapeAttr(KANE_CLI_URL)}">Kane CLI</a>`,
     "        </nav>",
     "      </div>",
-    '      <p class="lead">Kane CLI runs this poll app in a real browser. When a run fails, this page shows why, and how the fix loop closed.</p>',
+    '      <p class="lead">Kane CLI runs this poll app in a real browser. When a run fails, this page shows why it broke, where Kane diagnosed and gated the fix, and the committed network and code proofs that closed the loop.</p>',
+    '      <nav class="section-nav" aria-label="Page sections">',
+    '        <a href="#problem-solution">Problem &amp; Solution</a>',
+    '        <a href="#where-kane-helped">Where Kane Helped</a>',
+    '        <a href="#the-loop">The Loop</a>',
+    '        <a href="#red-run">Why It Broke &amp; Traces</a>',
+    '        <a href="#the-race">Fix Race</a>',
+    '        <a href="#green-run">Before / After Proof</a>',
+    '        <a href="#tests-and-proofs">Tests</a>',
+    '        <a href="#all-runs">All Runs</a>',
+    "      </nav>",
     "    </header>"
   ].join("\n");
 }
 
-function renderHowItWorks() {
+function renderProblemAndSolution() {
   return [
-    '      <section id="what-it-does">',
-    "        <h2>What Why It Broke does</h2>",
-    "        <p>Why It Broke is a closed-loop verification and repair harness built around Kane CLI. A small poll app serves as the subject under test while Kane tests it in a real browser, attributes failures, and gates every fix before it can reach main.</p>",
-    '        <div class="pillars">',
-    '          <div class="pillar">',
-    "            <h3>Browser verdict</h3>",
-    "            <p>Each commit boots a fresh poll app and runs owner-approved plain-text flows in a real browser via Kane CLI, returning a root-cause verdict and redacted evidence.</p>",
+    '      <section id="problem-solution">',
+    "        <h2>Problem definition &amp; solution</h2>",
+    '        <div class="two-col">',
+    '          <div class="doc-panel">',
+    "            <h3>The problem</h3>",
+    "            <p>AI coding agents write features and unit tests quickly, pass <code>npm test</code>, and still ship real browser defects: double-click duplicate submissions, DOM/HTTP race conditions, and stale explanations. Worse, when a browser check fails without structured fault attribution, an agent asked to make CI green can weaken the test instead of fixing the app.</p>",
     "          </div>",
-    '          <div class="pillar">',
-    "            <h3>Explained code trace</h3>",
-    "            <p>Every app function carries a source-hashed explanation. Reports pair Kane's verdict with the exact functions that ran on the failing path and flag stale docs.</p>",
-    "          </div>",
-    '          <div class="pillar">',
-    "            <h3>Gated 3-agent fix race</h3>",
-    "            <p>When Kane blames the app, three coding agents each attempt a fix in isolated git worktrees. Kane verifies every attempt; only a fix that passes Kane again can merge.</p>",
+    '          <div class="doc-panel">',
+    "            <h3>The solution</h3>",
+    "            <p><strong>Why It Broke</strong> puts Kane CLI in charge as an independent browser judge. Every commit boots a fresh poll app, executes owner-approved plain-English flows in Chromium, collects V8 function coverage and source-hashed explanations, and allows a 3-agent worktree fix race only when Kane attributes the failure to an <code>application_issue</code>. No fix reaches <code>main</code> until Kane passes it again.</p>",
     "          </div>",
     "        </div>",
+    '        <div class="pillars">',
+    '          <div class="pillar">',
+    "            <h3>1. Browser verdict</h3>",
+    "            <p>Kane CLI runs owner-approved plain-text flows in a real browser, separating app defects from test issues with a confidence score, root cause, culprit step, and redacted HAR/action logs.</p>",
+    "          </div>",
+    '          <div class="pillar">',
+    "            <h3>2. Explained code trace</h3>",
+    "            <p>Every app function carries a SHA-256 source-hashed explanation. Reports pair Kane's verdict with the exact V8-traced functions that ran on the failing path and flag stale docs via drift checks.</p>",
+    "          </div>",
+    '          <div class="pillar">',
+    "            <h3>3. Gated 3-agent fix race</h3>",
+    "            <p>When Kane blames the app, three Factory Droid agents each attempt a fix in isolated git worktrees using Kane's verdict in their brief. Kane verifies every attempt; only a verified winner merges.</p>",
+    "          </div>",
+    "        </div>",
+    "      </section>"
+  ].join("\n");
+}
+
+function renderWhereKaneHelped({ red, race, green, repoUrl }) {
+  const failingFlow = red?.failingFlows?.[0] ?? null;
+  const verdict = failingFlow?.verdict ?? null;
+  const redNet = failingFlow?.networkProof ?? null;
+  const greenNet = failingFlow && green?.networkProofs ? green.networkProofs[failingFlow.name] ?? null : null;
+  const deltaText =
+    redNet?.postDeltaMs !== null && redNet?.postDeltaMs !== undefined
+      ? ` (${redNet.postDeltaMs.toFixed(2)} ms apart)`
+      : "";
+
+  const oneLiner = String(verdict?.one_liner ?? failingFlow?.reason ?? "flow failed").replace(/\.+$/, "");
+  const suggestion = String(verdict?.suggestion ?? "not reported").replace(/\.+$/, "");
+
+  const detectDetail = red && failingFlow
+    ? `All unit tests passed on commit ${commitLink(repoUrl, red.testedCommit)}, yet Kane's real-browser run of <span class="mono">${escapeHtml(failingFlow.name)}</span> in report ${reportLink(repoUrl, red.pad)} caught the defect: ${escapeHtml(oneLiner)}.`
+    : "Kane CLI executes plain-English browser flows against a fresh poll app so real interaction defects are caught even when unit tests pass.";
+
+  const triageDetail = red && verdict
+    ? `Kane classified the failure as <span class="mono">${escapeHtml(verdict.family ?? "unknown")}</span> / <span class="mono">${escapeHtml(verdict.category ?? "unknown")}</span> (confidence <span class="mono">${escapeHtml(String(verdict.confidence ?? "n/a"))}</span>, culprit step <span class="mono">${escapeHtml(verdict.culprit_step ?? "n/a")}</span>), ruled out test/agent fault, ${redNet ? `logged <span class="mono">${redNet.postCount}x POST /api/polls</span>${escapeHtml(deltaText)} in the HAR, ` : ""}and suggested: "${escapeHtml(suggestion)}."`
+    : "Kane returns a structured verdict distinguishing app bugs from test faults, including culprit step, network signals, and a suggested fix.";
+
+  const raceDetail = race
+    ? `Kane's verdict and the ${failingFlow ? `${failingFlow.trace.length}-function ` : ""}V8 execution trace were written into <a href="${escapeAttr(`${repoUrl}/blob/main/reports/races/${race.pad}/brief.md`)}">brief.md</a> for ${raceLink(repoUrl, race.pad)}. ${race.attempts.length} isolated Droid racers submitted independent fixes and Kane verified all four flows on every attempt (${race.attempts.filter((a) => a.status === "green").length}/${race.attempts.length} green).`
+    : "When Kane names an app fault, its verdict feeds directly into the shared racer brief for three isolated worktree fix attempts.";
+
+  const solveDetail = green && race?.pick
+    ? `After the owner picked attempt <span class="mono">${escapeHtml(race.pick.letter ?? "?")}</span> (${commitLink(repoUrl, race.pick.commitShort ?? "")}), Kane re-verified the merge commit ${commitLink(repoUrl, green.testedCommit)} in report ${reportLink(repoUrl, green.pad)} (${green.flows.length}/${green.flows.length} flows pass, drift pass${redNet && greenNet ? `, HAR proof reduced from <span class="mono">${redNet.postCount}x</span> to <span class="mono">${greenNet.postCount}x POST /api/polls</span>` : ""}) before <span class="mono">main</span> advanced.`
+    : "No candidate fix advances main until Kane runs a full post-merge verification pass across every approved flow.";
+
+  return [
+    '      <section id="where-kane-helped">',
+    "        <h2>Where Kane CLI helped &amp; solved the issue</h2>",
+    "        <p>Kane CLI is not a passive test runner here. It acts as the detector, root-cause triager, racer brief author, and final merge gate across the full repair cycle:</p>",
+    '        <ol class="kane-roles">',
+    `          <li><strong>1. Caught what unit tests missed</strong><span>${detectDetail}</span></li>`,
+    `          <li><strong>2. Triaged root cause &amp; ruled out test fault</strong><span>${triageDetail}</span></li>`,
+    `          <li><strong>3. Drove &amp; judged the 3-agent fix race</strong><span>${raceDetail}</span></li>`,
+    `          <li><strong>4. Proved the fix before advancing main</strong><span>${solveDetail}</span></li>`,
+    "        </ol>",
     "      </section>"
   ].join("\n");
 }
@@ -662,7 +796,7 @@ function renderRedSection(red, repoUrl) {
       "      </section>"
     ].join("\n");
   }
-  const flowBlocks = red.failingFlows.map((flow) => renderFailingFlow(flow)).join("\n");
+  const flowBlocks = red.failingFlows.map((flow) => renderFailingFlow(flow, repoUrl)).join("\n");
   const figure = red.featuredImage
     ? [
         '        <figure class="featured-shot">',
@@ -683,7 +817,7 @@ function renderRedSection(red, repoUrl) {
     .join("\n");
 }
 
-function renderFailingFlow(flow) {
+function renderFailingFlow(flow, repoUrl) {
   const failureItems =
     flow.failures.length > 0
       ? flow.failures.map((item) => `            <li>${escapeHtml(item.displayTitle)}</li>`).join("\n")
@@ -691,8 +825,10 @@ function renderFailingFlow(flow) {
 
   const verdict = flow.verdict ?? {};
   const verdictRows = [
+    ...(verdict.bug_title ? [["Bug title", verdict.bug_title]] : []),
     ["Family", verdict.family],
     ["Category", verdict.category],
+    ...(verdict.severity ? [["Severity", verdict.severity]] : []),
     ["Root cause", verdict.root_cause],
     ["Suggestion", verdict.suggestion],
     ...(verdict.agent_fault_assessment ? [["Fault assessment", verdict.agent_fault_assessment]] : []),
@@ -704,6 +840,58 @@ function renderFailingFlow(flow) {
         `            <div><dt>${escapeHtml(label)}</dt><dd>${escapeHtml(value === undefined || value === null || value === "" ? "not reported" : String(value))}</dd></div>`
     )
     .join("\n");
+
+  const signals = Array.isArray(verdict.signals) ? verdict.signals : [];
+  const signalsBlock =
+    signals.length > 0
+      ? [
+          "          <h4>Kane verdict signals</h4>",
+          '          <ul class="signal-list">',
+          ...signals.map(
+            (sig) =>
+              `            <li><span class="mono">step ${escapeHtml(sig.step ?? "?")}</span> <span class="sig-kind">[${escapeHtml(sig.kind ?? "signal")}]</span> ${escapeHtml(sig.excerpt ?? "")}</li>`
+          ),
+          "          </ul>"
+        ].join("\n")
+      : "";
+
+  const net = flow.networkProof ?? null;
+  const netRows = net && net.entries.length > 0
+    ? net.entries
+        .map(
+          (e) =>
+            `              <tr><td class="mono">${escapeHtml(e.started ?? "")}</td><td class="mono">${escapeHtml(e.method)}</td><td class="mono">${escapeHtml(e.pathname)}</td><td class="mono">${escapeHtml(e.status ?? "")}</td></tr>`
+        )
+        .join("\n")
+    : "";
+  const netBlock =
+    net && net.entries.length > 0
+      ? [
+          "          <h4>Committed network HAR trace</h4>",
+          `          <p class="proof-caption">Extracted from <a class="mono" href="${escapeAttr(`${repoUrl}/blob/main/${net.harPath}`)}">${escapeHtml(net.harPath)}</a>: <span class="mono">${net.postCount}x POST /api/polls</span>${net.postDeltaMs !== null ? ` (<span class="mono">${net.postDeltaMs.toFixed(2)} ms</span> between duplicate requests)` : ""}.</p>`,
+          '          <div class="table-wrap">',
+          "            <table>",
+          "              <thead><tr><th>Timestamp (UTC)</th><th>Method</th><th>Endpoint</th><th>Status</th></tr></thead>",
+          "              <tbody>",
+          netRows,
+          "              </tbody>",
+          "            </table>",
+          "          </div>"
+        ].join("\n")
+      : "";
+
+  const ev = flow.evidenceLinks ?? {};
+  const evParts = [
+    ev.dir ? `<a href="${escapeAttr(`${repoUrl}/tree/main/${ev.dir}`)}">evidence folder</a>` : null,
+    ev.failureYaml ? `<a href="${escapeAttr(`${repoUrl}/blob/main/${ev.failureYaml}`)}">failure.yaml</a>` : null,
+    ev.networkHar ? `<a href="${escapeAttr(`${repoUrl}/blob/main/${ev.networkHar}`)}">0-network.har</a>` : null,
+    ev.actionsNdjson ? `<a href="${escapeAttr(`${repoUrl}/blob/main/${ev.actionsNdjson}`)}">0-actions.ndjson</a>` : null,
+    ev.dagDiagram ? `<a href="${escapeAttr(`${repoUrl}/blob/main/${ev.dagDiagram}`)}">0-dag_diagram.md</a>` : null
+  ].filter(Boolean);
+  const evBlock =
+    evParts.length > 0
+      ? `          <p class="evidence-bar"><strong>Committed proof artifacts:</strong> ${evParts.join(" · ")}</p>`
+      : "";
 
   const traceBlocks =
     flow.trace.length === 0
@@ -741,10 +929,15 @@ function renderFailingFlow(flow) {
     '          <dl class="verdict-grid">',
     verdictRows,
     "          </dl>",
-    "          <h4>Functions that ran in this flow, in file order</h4>",
+    signalsBlock,
+    netBlock,
+    evBlock,
+    `          <h4>Functions that ran in this flow, in file order (${flow.trace.length})</h4>`,
     traceBlocks,
     "        </div>"
-  ].join("\n");
+  ]
+    .filter(Boolean)
+    .join("\n");
 }
 
 function renderRaceSection(race, repoUrl) {
@@ -804,10 +997,17 @@ function renderRaceSection(race, repoUrl) {
         "        </div>"
       ].join("\n");
 
+  const raceDocs = [
+    `<a href="${escapeAttr(`${repoUrl}/blob/main/reports/races/${race.pad}/brief.md`)}">brief.md</a>`,
+    `<a href="${escapeAttr(`${repoUrl}/blob/main/reports/races/${race.pad}/comparison.md`)}">comparison.md</a>`,
+    race.pick ? `<a href="${escapeAttr(`${repoUrl}/blob/main/reports/races/${race.pad}/pick.md`)}">pick.md</a>` : null,
+    `<a href="${escapeAttr(`${repoUrl}/blob/main/reports/races/${race.pad}/attempts.json`)}">attempts.json</a>`
+  ].filter(Boolean);
+
   return [
     '      <section id="the-race">',
     "        <h2>The race</h2>",
-    `        <p>${raceLink(repoUrl, race.pad)} for red report ${escapeHtml(race.redReportPad ?? "unknown")}.</p>`,
+    `        <p>${raceLink(repoUrl, race.pad)} for red report ${escapeHtml(race.redReportPad ?? "unknown")}. Committed race artifacts: ${raceDocs.join(" · ")}.</p>`,
     '        <div class="table-wrap">',
     "          <table>",
     "            <thead>",
@@ -823,7 +1023,7 @@ function renderRaceSection(race, repoUrl) {
   ].join("\n");
 }
 
-function renderGreenSection(green, race, repoUrl) {
+function renderGreenSection(green, red, race, repoUrl) {
   if (!green) {
     const extra = race && !race.pick ? " No attempt passed in the latest race, so no green merge exists." : "";
     return [
@@ -836,6 +1036,26 @@ function renderGreenSection(green, race, repoUrl) {
   const flowItems = green.flows
     .map((flow) => `          <li>${chipForOutcome(flow.outcome)} <span class="mono">${escapeHtml(flow.name)}</span> (${escapeHtml(flow.reason ?? "")})</li>`)
     .join("\n");
+
+  const failingFlow = red?.failingFlows?.[0] ?? null;
+  const redNet = failingFlow?.networkProof ?? null;
+  const greenNet = failingFlow && green.networkProofs ? green.networkProofs[failingFlow.name] ?? null : null;
+  const compareBlock =
+    redNet && greenNet
+      ? [
+          "        <h3>Before vs. after network HAR proof</h3>",
+          '        <div class="table-wrap">',
+          "          <table>",
+          "            <thead><tr><th>Run</th><th>Flow outcome</th><th>POST /api/polls count</th><th>API sequence in committed HAR</th><th>Proof file</th></tr></thead>",
+          "            <tbody>",
+          `              <tr><td class="mono">Before (${reportLink(repoUrl, red.pad)})</td><td>${renderChip("FAIL")}</td><td class="mono">${redNet.postCount}x (201)${redNet.postDeltaMs !== null ? ` · ${redNet.postDeltaMs.toFixed(2)} ms apart` : ""}</td><td class="mono">${escapeHtml(redNet.entries.map((e) => `${e.method} ${e.pathname} -> ${e.status}`).join("; "))}</td><td><a href="${escapeAttr(`${repoUrl}/blob/main/${redNet.harPath}`)}">0-network.har</a></td></tr>`,
+          `              <tr><td class="mono">After (${reportLink(repoUrl, green.pad)})</td><td>${renderChip("PASS")}</td><td class="mono">${greenNet.postCount}x (201)</td><td class="mono">${escapeHtml(greenNet.entries.map((e) => `${e.method} ${e.pathname} -> ${e.status}`).join("; "))}</td><td><a href="${escapeAttr(`${repoUrl}/blob/main/${greenNet.harPath}`)}">0-network.har</a></td></tr>`,
+          "            </tbody>",
+          "          </table>",
+          "        </div>"
+        ].join("\n")
+      : "";
+
   const figure = green.featuredImage
     ? [
         '        <figure class="featured-shot">',
@@ -851,11 +1071,33 @@ function renderGreenSection(green, race, repoUrl) {
     '        <ul class="flow-list">',
     flowItems,
     "        </ul>",
+    compareBlock,
     figure,
     "      </section>"
   ]
     .filter(Boolean)
     .join("\n");
+}
+
+function renderTestsAndProofs({ runs, red, race, green, repoUrl }) {
+  const latestFlows = runs.length > 0 ? runs.at(-1).flows.length : 4;
+  return [
+    '      <section id="tests-and-proofs">',
+    "        <h2>Tests, flows &amp; verification layers</h2>",
+    "        <p>Every change passes four independent verification layers so neither a silent browser bug nor a stale explanation can slip onto main.</p>",
+    '        <div class="table-wrap">',
+    "          <table>",
+    "            <thead><tr><th>Layer</th><th>Command</th><th>What it verifies</th><th>Committed proof</th></tr></thead>",
+    "            <tbody>",
+    `              <tr><td><strong>Real-browser Kane flows</strong></td><td class="mono">npm run verify</td><td>${latestFlows} owner-approved plain-English flows in Chromium (<span class="mono">poll-create</span>, <span class="mono">poll-vote</span>, <span class="mono">poll-vote-once</span>, <span class="mono">poll-create-once</span>) with SHA-256 tamper protection in <span class="mono">flows/approvals.json</span>.</td><td><a href="${escapeAttr(`${repoUrl}/tree/main/flows`)}">flows/</a> · ${runs.length} reports</td></tr>`,
+    `              <tr><td><strong>Unit &amp; harness tests</strong></td><td class="mono">npm test</td><td>166 Node tests across 16 suites covering poll store/API, drift checker, explain CLI, flow approvals, redaction, locks, Stop hook, race runner, verify runner, and deterministic site generation.</td><td><a href="${escapeAttr(`${repoUrl}/tree/main/test`)}">test/</a></td></tr>`,
+    `              <tr><td><strong>Function-explanation drift</strong></td><td class="mono">npm run drift</td><td>AST + SHA-256 check across every function in <span class="mono">app/server.mjs</span> and <span class="mono">app/store.mjs</span>, paired with V8 execution coverage during verify to flag missing, stale, or uncovered functions.</td><td><a href="${escapeAttr(`${repoUrl}/blob/main/explain/functions.json`)}">explain/functions.json</a></td></tr>`,
+    `              <tr><td><strong>Redacted evidence &amp; race records</strong></td><td class="mono">npm run site</td><td>Secret/email/path redaction on Kane evidence packs (HAR, actions, failure YAML, DAG trajectory) plus committed race briefs, attempt reports, and owner pick receipts.</td><td>${red ? reportLink(repoUrl, red.pad) : "n/a"} · ${race ? raceLink(repoUrl, race.pad) : "n/a"} · ${green ? reportLink(repoUrl, green.pad) : "n/a"}</td></tr>`,
+    "            </tbody>",
+    "          </table>",
+    "        </div>",
+    "      </section>"
+  ].join("\n");
 }
 
 function renderAllRunsSection(runs, repoUrl) {
@@ -1039,6 +1281,80 @@ const STYLES = `
       gap: 1.25rem;
       font-size: var(--text-sm);
       font-weight: 500;
+    }
+    .section-nav {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem 1rem;
+      margin-top: 1rem;
+      padding-top: 0.85rem;
+      border-top: 1px solid var(--rule-soft);
+      font-size: var(--text-sm);
+      font-weight: 500;
+    }
+    .two-col {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 1.25rem;
+      margin-top: 0.5rem;
+    }
+    .doc-panel {
+      padding: 1rem 1.15rem;
+      background: var(--surface);
+      border: 1px solid var(--rule-soft);
+    }
+    .doc-panel h3 {
+      margin: 0 0 0.45rem;
+    }
+    .doc-panel p {
+      margin: 0;
+      font-size: var(--text-sm);
+      color: var(--ink);
+    }
+    .kane-roles {
+      list-style: none;
+      margin: 0.75rem 0 0;
+      padding: 0;
+      border-top: 1px solid var(--rule-soft);
+    }
+    .kane-roles li {
+      display: grid;
+      grid-template-columns: 18rem 1fr;
+      gap: 0.4rem 1.25rem;
+      padding: 0.75rem 0;
+      border-bottom: 1px solid var(--rule-soft);
+      font-size: var(--text-sm);
+    }
+    .signal-list {
+      margin: 0.4rem 0 1.25rem;
+      padding: 0.75rem 1rem 0.75rem 1.75rem;
+      background: var(--surface);
+      border: 1px solid var(--rule-soft);
+      font-size: var(--text-sm);
+    }
+    .signal-list li + li { margin-top: 0.35rem; }
+    .sig-kind {
+      color: var(--muted);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 0.85em;
+    }
+    .proof-caption {
+      font-size: var(--text-sm);
+      color: var(--muted);
+      margin-bottom: 0.5rem;
+      max-width: none;
+    }
+    .evidence-bar {
+      margin: 1rem 0 1.25rem;
+      padding: 0.65rem 0.9rem;
+      background: var(--surface);
+      border: 1px solid var(--rule-soft);
+      font-size: var(--text-sm);
+      max-width: none;
+    }
+    code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 0.9em;
     }
     a {
       color: var(--accent);
@@ -1309,8 +1625,8 @@ const STYLES = `
     @media (max-width: 680px) {
       .page { padding: 1.5rem 1rem 3rem; }
       .masthead-bar { gap: 0.75rem; }
-      .pillars { grid-template-columns: 1fr; gap: 1rem; }
-      .loop-list li { grid-template-columns: 1fr; gap: 0.25rem; }
+      .pillars, .two-col { grid-template-columns: 1fr; gap: 1rem; }
+      .loop-list li, .kane-roles li { grid-template-columns: 1fr; gap: 0.25rem; }
       .verdict-grid > div { grid-template-columns: 1fr; gap: 0.15rem; }
     }
     @media (prefers-reduced-motion: reduce) {
