@@ -1,12 +1,14 @@
 # Why It Broke: Design
 
 **Date:** 2026-11-22
-**Status:** Built. Verify runs 0001 to 0008 are committed and green. The fix race is tested with fake racers and a fake verify, and it has not run on a real red yet. See the README for the current status. This replaces the verified-receipts design of the same date. A builder check found five gaps. Each is settled as a call in the sections below and marked.
+**Status:** Built. Verify runs 0001 to 0008 are committed and green. The fix race is tested with fake racers and a fake verify, and it has not run on a real red yet. On 26 Nov the owner added two race rules: a sole green attempt merges by itself, and a race with no green attempt commits its records to main. Fix race describes both. The page builder builds them before the first real race. See the README for the current status. This replaces the verified-receipts design of the same date. A builder check found five gaps. Each is settled as a call in the sections below and marked.
 **Event:** KaneCLI Online Hackathon by TestMu AI ([kaneclihack.sh](https://www.kaneclihack.sh/)). The repo must be initialized on or after 12 Nov 2026. Old ideas are fine, old codebases are not. Submissions close Thu 26 Nov 2026, 11:59 PM IST (10:29 AM PT).
 
 ## Intent
 
-An AI coding agent builds a small web app. Kane CLI runs the app's flows in a real browser after each change. When a flow fails, the report says why. It gives Kane's verdict and lists the server functions that ran on the failing path, each with a plain-English explanation. Then three coding agents each try a fix in their own git worktree. Kane checks each fix, and the owner picks the one to keep. Every run is committed, so the git history shows what broke, what was tried, and what was kept.
+Kane CLI judges a small poll app in a real browser after each change, and an AI coding agent makes those changes. When a run fails, the report gives Kane's verdict and lists the server functions that ran on the failing path, each with a plain-English explanation. If Kane places the fault in the app, three coding agents each try a fix in their own git worktree, and Kane judges each fix. If exactly one fix passes, the runner merges it. If two or three pass, the owner picks one. Every run is committed, so the git history shows what Kane caught, what was tried, and what was kept.
+
+The poll app is the subject under test. Kane's verdict and the fix loop are what the project shows.
 
 It is for vibecoders who want to learn what their code does, and for judges who need to see what broke and why.
 
@@ -23,17 +25,17 @@ In the 103 Kane READMEs I scanned, I found no function-level trace tied to a fai
 
 ## Goals
 
-1. A poll app (create a poll, vote, see results) that starts with one command.
+1. Kane judges a poll app (create a poll, vote, see results) in a real browser. The app starts with one command.
 2. Three Kane flows: create a poll, vote, and refuse a second vote from the same browser.
 3. Auto verify: after an agent turn that commits a change under `app/` or `explain/`, a Stop hook runs the three flows.
 4. A Why It Broke report for each run: each flow's verdict, Kane's verdict for any failure, and the explained trace of the server functions that ran during each failing flow.
 5. A drift check that fails when a function has no explanation, when its code changed after its explanation was written, or when no flow ran it.
-6. A fix race after a red run that the racers can fix (see Fix race for which reds qualify): three Droid agents each fix the app in their own worktree and branch, the runner verifies each attempt, a comparison shows the results, and the owner picks one passing attempt for the runner to merge.
-7. A 3 to 5 minute demo: one real red run from a real agent mistake, the report, the race, the pick, and the green main.
+6. A fix race after a red run that the racers can fix (see Fix race for which reds qualify): three Droid agents each fix the app in their own worktree and branch, the runner verifies each attempt with Kane, and a comparison shows the results. If exactly one attempt passes, the runner merges it. If two or three pass, the owner picks one for the runner to merge.
+7. A 3 to 5 minute demo: one real red run from a real agent mistake, Kane's verdict, the report, the race, the merge, and the green main.
 
 ## Non-goals
 
-- No hosted service, accounts, or database. Poll data lives in a local JSON file.
+- No hosted app, accounts, or database. Poll data lives in a local JSON file. The one hosted piece is the static report page (see the report page design).
 - No login in the app and no third-party API. Judges can run the app as it is.
 - No mobile target.
 - No static code-impact map. The impact view shows what the flows ran, not what a line change might break.
@@ -116,7 +118,7 @@ Fails when:
 
 ### Fix race (`npm run race`)
 
-1. Starts only after a red report at HEAD, and only if no race holds the lock. These reds start a race (my call):
+1. Starts only after a red report, and only when the code at HEAD is the code that report tested. Since that report, only files under `reports/races/` may differ. No race may hold the lock. These reds start a race (my call):
    - A flow failure that Kane's verdict puts in the app.
    - A drift failure that the racers can fix: a missing or stale explanation, an anonymous function, or an explanation for a removed function. The drift table is the brief.
 
@@ -128,9 +130,12 @@ Fails when:
 3. Starts three Factory Droid agents with `droid exec`, one per worktree, with the same brief: the failing report, Kane's verdict, and the explained trace. Each racer changes only `app/` and `explain/`, commits its fix, and stops. Racers do not touch `flows/`, `reports/`, `scripts/`, `.factory/`, or `AGENTS.md`. A racer that makes no commit counts as failed.
 4. When each racer exits, the runner verifies its attempt in its worktree: the same three flows and drift check, on its own port and coverage folder. Attempts are verified one after another. Attempt reports stay outside the repo until the pick.
 5. Writes `comparison.md` with, for each attempt: branch, commit, flow verdicts, drift result, files and lines changed, and explanations changed. It names no winner.
-6. The owner runs `npm run race:pick -- NNNN <a|b|c> --reason "<text>"`. The pick refuses an attempt that is not green. Otherwise it leaves main alone until the merge is proven (my call). It merges the branch with `--no-ff` in a temporary worktree of main, copies the race reports into `reports/races/NNNN/`, records the reason in `pick.md`, and runs verify there. Only a green run moves main, by fast-forward. A red run leaves main where it was, records the failed merge in `pick.md`, and keeps the lock for the owner. After a successful pick, the runner removes the worktrees and keeps the branches.
+6. The merge takes one attempt in one of two ways (owner decision, 26 Nov):
+   - One green attempt: the runner picks it and merges it, with no owner command. A sole green attempt must pass every flow and the drift check, as a pick requires. `pick.md` says `Picked by: runner` and gives the reason: it was the only attempt that passed Kane's verify.
+   - Two or three green attempts: the race waits. The owner runs `npm run race:pick -- NNNN <a|b|c> --reason "<text>"`, and `pick.md` says `Picked by: owner`. The pick refuses an attempt that is not green.
+   Both paths run the same merge. It leaves main alone until the merge is proven (my call). It merges the branch with `--no-ff` in a temporary worktree of main, copies the race reports into `reports/races/NNNN/`, records the pick in `pick.md`, and runs verify there. Only a green run moves main, by fast-forward. A red run leaves main where it was, records the failed merge in `pick.md`, and keeps the lock for the owner. After a successful pick, the runner removes the worktrees and keeps the branches.
 7. The other branches stay in git with their reports, so judges can inspect them.
-8. When no attempt is green (my call): nothing merges, and main stays at its red HEAD. Worktrees, branches, and reports stay for inspection, and `comparison.md` shows why each attempt failed. The race lock clears, so the owner can start another race. Until the owner acts, the builder does not change `app/` or `explain/`. The owner then runs `npm run race` again on the same red HEAD (the new brief lists the earlier attempts' failing verdicts, so racers do not repeat them) or fixes the app by hand. The owner can also close a race that has green attempts but no pick with `npm run race:close -- NNNN`, which clears the lock. The hook never starts a race on its own for a red HEAD that already has one.
+8. When no attempt is green (my call): nothing merges, and main's app code stays at its red HEAD. The race copies its records to `reports/races/NNNN/` and commits them to main as one commit, `race NNNN: no attempt is green`. That commit adds only that folder. Racer branches and worktrees stay local, and `comparison.md` shows why each attempt failed. The race lock clears, so the owner can start another race. Until the owner acts, the builder does not change `app/` or `explain/`. The owner then runs `npm run race` again on the same red code (the new brief lists the earlier attempts' failing verdicts, so racers do not repeat them) or fixes the app by hand. The owner can also close a race that has green attempts but no pick with `npm run race:close -- NNNN`, which clears the lock. The hook never starts a race on its own for red code that already has one.
 
 ### Auto mode (Stop hook)
 
@@ -139,7 +144,7 @@ Fails when:
 - If HEAD changed under `app/` or `explain/` since the last report's tested commit, the hook runs verify.
 - Green: the turn ends.
 - Red: if the red starts a race (see Fix race), the hook starts it in the background and exits 0 with a message to the owner. Other reds exit 0 with the reason. The builder does not fix its own change. The racers do.
-- While a race holds the lock, a lock file outside the repo stops the hook from starting another race. The lock is held from the start of a race until a pick succeeds or the owner closes the race. A race with no green attempt releases it at once (see Fix race, step 8). AGENTS.md tells the builder not to change `app/` or `explain/` while the lock is held, and not after a red run until the owner acts.
+- While a race holds the lock, a lock file outside the repo stops the hook from starting another race. The lock is held from the start of a race until a pick succeeds, whether the owner's or the runner's, or the owner closes the race. A race with no green attempt releases it at once (see Fix race, step 8). AGENTS.md tells the builder not to change `app/` or `explain/` while the lock is held, and not after a red run until the owner acts.
 - If the hook cannot run as documented, the fallback is AGENTS.md: the agent runs `npm run verify` and waits for the result.
 
 ### Agent rules (`AGENTS.md`)
@@ -167,9 +172,9 @@ docs/superpowers/specs/ and plans/
 - Works end to end: `npm start` serves the app, and all three flows pass on main.
 - Kane caught or proved something: a real red run, with Kane's verdict in the report.
 - Agent and Kane talked: the brief goes to the racers, and their attempts come back as Kane verdicts.
-- Closed loop: Kane's verdict, then the brief, then the racers, then Kane again, then the owner's pick, then Kane on main.
+- Closed loop: Kane's verdict, then the brief, then the racers, then Kane again, then the merge (the runner's for a sole green attempt, the owner's pick for two or three), then Kane on main.
 - Verified: every report and comparison is a committed Kane result.
-- Craft: one command to start, no login, and a README that shows a red run and a pick.
+- Craft: one command to start, no login, and a README that shows a red run and its merge.
 
 ### Judge access
 
@@ -180,7 +185,7 @@ Judges can read every report and comparison in the repo without Kane. The owner 
 - 0:00 to 0:20: the problem.
 - 0:20 to 1:00: the agent makes a change, and the Stop hook runs verify.
 - 1:00 to 2:00: the red run, Kane's verdict, and the Why It Broke trace.
-- 2:00 to 3:00: the race, the comparison, and the owner's pick.
+- 2:00 to 3:00: the race, the comparison, and the merge.
 - 3:00 to 3:40: the green main and the drift check.
 - 3:40 to 4:10: how to run it.
 
@@ -220,18 +225,19 @@ The core stays: the trace with explanations, the drift check, the race compariso
 The builder check raised five gaps. I settled each one as a call, and each is marked in the sections above.
 
 - Which reds start a race: flow failures the app caused, and drift failures the racers can fix. Error verdicts and never-run functions do not start one.
-- No green attempt: nothing merges, the lock clears, and the owner decides the next step. The hook does not re-race on its own.
+- No green attempt: nothing merges. The records commit to main, the lock clears, and the owner decides the next step. The hook does not re-race on its own.
 - Kane reaches localhost by default. A per-run cloudflared tunnel is the fallback, and the runner owns it. Flows contain no URLs.
 - The trace covers the whole flow run, not single steps. Kane's culprit step is shown beside it.
 - The pick merges in a temporary worktree and moves main only after that merge verifies green.
 - Repo name `why-it-broke` under etvjay, checked free on 22 Nov.
 - "Kane agents" read as three coding agents (Factory Droid) that each get the Kane brief. Kane judges the fixes.
 - The builder does not fix its own red change. The race does.
-- Only the owner can run the pick.
+- The owner runs the pick only when two or three attempts are green. A sole green attempt merges by itself (owner decision, 26 Nov).
+- No new app features until the first real red. After that, app changes come only from a fault Kane judges, through the race (owner decision, 26 Nov).
 - iGraph is credited, not reused. It predates the repo rule.
 - Striptease: the skeleton view is folded into the explainer as collapsed source in each trace entry. It does not claim to catch bugs.
 - CodeGraph: the impact view is observed, not predicted. It shows which flows ran each function and flags changed functions that no flow ran.
-- The poll app is the demo subject.
+- The poll app is the subject under test. Kane's verdict and the fix loop are the point (owner decision, 26 Nov).
 - The verified-receipts design and plan were removed from the tree. They remain in history at e04b168. Their receipt chain and verifier are dropped.
 
 ## Left to the builder
@@ -248,3 +254,4 @@ The builder check raised five gaps. I settled each one as a call, and each is ma
 - Set Git user.name and user.email before the first commit.
 - Create the judge Kane login and share it through the submission form.
 - Record and upload the demo video, then post the two launch posts. The agent drafts them.
+- Approve flow `poll-create-once` with `npm run flows:approve`. The first real red depends on it.

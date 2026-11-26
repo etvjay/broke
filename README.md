@@ -1,8 +1,8 @@
 # Why It Broke
 
-Kane CLI runs this poll app in a real browser, the way a user would. Each run returns a verdict with its evidence: a screenshot for each step, the network log, and a call on whether the app or the test is at fault.
+Kane CLI tests a small poll app in a real browser after each change, the way a user would. Each run returns Kane's verdict with its evidence: a screenshot for each step, the network log, and a call on whether the app or the test is at fault.
 
-Why It Broke turns a failed run into a report. The report gives Kane's verdict and the app functions that ran on the failing path, each with a plain explanation. When Kane places a fault in the app, three coding agents each try a fix in their own git worktree. Kane runs the same flows on every attempt, and the owner picks the one to keep. Only a fix that passes Kane again can merge.
+When a run fails, Why It Broke turns it into a report. The report gives Kane's verdict and the app functions that ran on the failing path, each with a plain explanation. When Kane places a fault in the app, three coding agents each try a fix in their own git worktree, and Kane runs the same flows on every attempt. If exactly one fix passes, the runner merges it. If two or three pass, the owner picks one. Only a fix that passes Kane again can merge. The poll app is the subject under test. What the project shows is Kane's verdict and the fix loop that follows it.
 
 Built for the [KaneCLI Online Hackathon](https://www.kaneclihack.sh/) by TestMu AI.
 
@@ -10,6 +10,7 @@ Built for the [KaneCLI Online Hackathon](https://www.kaneclihack.sh/) by TestMu 
 
 - Eight verify runs, 0001 to 0008, are committed. All eight are green.
 - The race has not run on a real red yet. It is built and tested with fake racers and a fake verify.
+- Two race rules change before the first real race. A sole green fix will merge without an owner command, and a race with no green fix will commit its records to main. The spec's Fix race section has both rules. Until that change lands, the race sections below describe the current code.
 - In a scratch run on 25 November, Kane caught a real bug. Double-clicking Create poll made two identical polls. Kane's verdict was `application_issue` at 0.98 confidence. The network log shows two POST requests, both 201. The scratch run is not a verify report, and its evidence pack is not in this repo. The bug is still in the app. The flow that checks for it, `poll-create-once`, waits for the owner's approval.
 - The race gate first checked for `app_bug`. Kane's verdicts use `application_issue`, so a real app fault would not have started a race. The gate now checks `application_issue` (commit `18cb453`). This was fixed before any red run.
 - Committed evidence is text only: network logs, console logs, and failure files. Verify does not copy screenshots into the repo. Kane keeps them in its evidence packs.
