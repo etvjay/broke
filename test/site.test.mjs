@@ -1,11 +1,13 @@
 import { after, test } from "node:test";
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
+import { existsSync } from "node:fs";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { scanSecrets } from "../scripts/lib/redact.mjs";
+import { extractFeatured } from "../scripts/site-featured.mjs";
 import { buildSite, loadSite, renderSite } from "../scripts/site.mjs";
 import { TEST_EMAIL, TEST_NAME } from "./support/identity.mjs";
 
@@ -350,4 +352,117 @@ test("building site on this repo is byte-identical across runs and contains no s
   }
   assert.match(html1, /No red run yet\./);
   assert.match(html1, /No race has reached main yet\./);
+});
+
+function writeZip(zipPath, entries) {
+  const script = `
+import json, sys, zipfile
+out = sys.argv[1]
+items = json.loads(sys.argv[2])
+with zipfile.ZipFile(out, "w") as zf:
+    for name, body in items.items():
+        zf.writestr(name, body)
+`;
+  execFileSync("python3", ["-c", script, zipPath, JSON.stringify(entries)]);
+}
+
+async function setupFeaturedFixture(greenSteps) {
+  const dir = await mkdtemp(join(tmpdir(), "wib-featured-"));
+  temps.push(dir);
+  const home = join(dir, "home");
+  const repo = join(dir, "repo");
+  const sessionEv = join(home, ".testmuai", "kaneai", "sessions", "sess-1", "evidence");
+  await mkdir(sessionEv, { recursive: true });
+  await mkdir(join(repo, "reports", "evidence", "0001", "poll-create-once"), { recursive: true });
+  await mkdir(join(repo, "reports", "evidence", "0002", "poll-create-once"), { recursive: true });
+  await writeFile(
+    join(repo, "reports", "0001.json"),
+    `${JSON.stringify({ number: 1, testedCommit: "a".repeat(40), outcome: "fail", flows: [{ name: "poll-create-once.md", outcome: "fail" }], drift: { ok: true, problems: [] } })}\n`
+  );
+  await writeFile(
+    join(repo, "reports", "evidence", "0001", "poll-create-once", "run.yaml"),
+    "evidence: '0.1'\nrun_id: red-run-1\n"
+  );
+  await writeFile(
+    join(repo, "reports", "evidence", "0001", "poll-create-once", "failure.yaml"),
+    [
+      "failures:",
+      "  - test: t1",
+      "    ordinal: 7",
+      "    step: 0-7",
+      "    status: failed",
+      "    path: tests/t1/steps/7-0-7/failure.yaml",
+      "    title: Create poll submits twice",
+      ""
+    ].join("\n")
+  );
+  await writeFile(
+    join(repo, "reports", "evidence", "0002", "poll-create-once", "run.yaml"),
+    "evidence: '0.1'\nrun_id: green-run-2\n"
+  );
+  writeZip(join(sessionEv, "red-run-1.evidence"), {
+    "tests/t1/steps/7-0-7/step.json": JSON.stringify({ summary: "click: Clicking Create poll button", ordinal: 7 }),
+    "tests/t1/steps/7-0-7/screenshot.jpg": "RED-JPG",
+    "tests/t1/steps/7-0-7/annotated.png": "RED-PNG"
+  });
+  writeZip(join(sessionEv, "green-run-2.evidence"), greenSteps);
+  return { dir, home, repo };
+}
+
+test("site:featured copies red and matching green step by summary (never step number) and writes matches.txt", async () => {
+  const { home, repo } = await setupFeaturedFixture({
+    "tests/t2/steps/3-0-3/step.json": JSON.stringify({ summary: "click: Clicking Create poll button", ordinal: 3 }),
+    "tests/t2/steps/3-0-3/screenshot.jpg": "GREEN-JPG",
+    "tests/t2/steps/7-0-7/step.json": JSON.stringify({ summary: "assert: Other step at same number", ordinal: 7 }),
+    "tests/t2/steps/7-0-7/screenshot.jpg": "WRONG-STEP"
+  });
+  const prevHome = process.env.HOME;
+  process.env.HOME = home;
+  try {
+    const logs = [];
+    const res = await extractFeatured({ root: repo, redNumber: "0001", greenNumber: "0002", log: (l) => logs.push(l) });
+    assert.equal(res.red.copied.length, 2);
+    assert.equal(res.green.copied.length, 1);
+    assert.equal(await readFile(join(home, ".why-it-broke", "featured", "0001", "screenshot.jpg"), "utf8"), "RED-JPG");
+    assert.equal(await readFile(join(home, ".why-it-broke", "featured", "0001", "annotated.png"), "utf8"), "RED-PNG");
+    assert.equal(await readFile(join(home, ".why-it-broke", "featured", "0002", "screenshot.jpg"), "utf8"), "GREEN-JPG");
+    const greenMatches = await readFile(join(home, ".why-it-broke", "featured", "0002", "matches.txt"), "utf8");
+    assert.match(greenMatches, /click: Clicking Create poll button/);
+    assert.match(greenMatches, /3-0-3/);
+    assert.doesNotMatch(greenMatches, /\/home\//);
+    assert.equal(existsSync(join(repo, "reports", "featured")), false);
+  } finally {
+    process.env.HOME = prevHome;
+  }
+});
+
+test("site:featured copies nothing for green when summary matches zero steps or two steps", async () => {
+  const zero = await setupFeaturedFixture({
+    "tests/t2/steps/3-0-3/step.json": JSON.stringify({ summary: "click: Different button", ordinal: 3 }),
+    "tests/t2/steps/3-0-3/screenshot.jpg": "OTHER"
+  });
+  const two = await setupFeaturedFixture({
+    "tests/t2/steps/3-0-3/step.json": JSON.stringify({ summary: "click: Clicking Create poll button", ordinal: 3 }),
+    "tests/t2/steps/3-0-3/screenshot.jpg": "FIRST",
+    "tests/t2/steps/5-0-5/step.json": JSON.stringify({ summary: "click: Clicking Create poll button", ordinal: 5 }),
+    "tests/t2/steps/5-0-5/screenshot.jpg": "SECOND"
+  });
+  const prevHome = process.env.HOME;
+  try {
+    process.env.HOME = zero.home;
+    const logsZero = [];
+    const resZero = await extractFeatured({ root: zero.repo, redNumber: "0001", greenNumber: "0002", log: (l) => logsZero.push(l) });
+    assert.equal(resZero.green.copied.length, 0);
+    assert.equal(existsSync(join(zero.home, ".why-it-broke", "featured", "0002", "screenshot.jpg")), false);
+    assert.match(await readFile(join(zero.home, ".why-it-broke", "featured", "0002", "matches.txt"), "utf8"), /0 matches/i);
+
+    process.env.HOME = two.home;
+    const logsTwo = [];
+    const resTwo = await extractFeatured({ root: two.repo, redNumber: "0001", greenNumber: "0002", log: (l) => logsTwo.push(l) });
+    assert.equal(resTwo.green.copied.length, 0);
+    assert.equal(existsSync(join(two.home, ".why-it-broke", "featured", "0002", "screenshot.jpg")), false);
+    assert.match(await readFile(join(two.home, ".why-it-broke", "featured", "0002", "matches.txt"), "utf8"), /2 matches/i);
+  } finally {
+    process.env.HOME = prevHome;
+  }
 });
