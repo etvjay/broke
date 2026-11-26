@@ -1,0 +1,10 @@
+{
+  "kind": "assert",
+  "status": "passed",
+  "summary": "assert: no poll with the question \"Only one?\" appears in the list",
+  "duration_ms": 5.3,
+  "url": "http://localhost:43523/",
+  "action_id": "61eed946-fcc6-417d-9367-a37cde965273",
+  "ordinal": 15,
+  "id": "1-7"
+}

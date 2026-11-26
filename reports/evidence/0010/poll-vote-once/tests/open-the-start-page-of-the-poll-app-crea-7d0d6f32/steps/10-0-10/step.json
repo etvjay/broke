@@ -1,0 +1,14 @@
+{
+  "kind": "analyze",
+  "status": "passed",
+  "summary": "analyze: the poll shows \"Green (1)\".",
+  "duration_ms": 10538.8,
+  "url": "http://localhost:38779/",
+  "action_id": "7f933bee-775e-4ccf-adb4-3afd17e5e2ab",
+  "analyze_action_ids": [
+    "0c756b1e-279a-49da-9236-e3eeacfa8790",
+    "7f933bee-775e-4ccf-adb4-3afd17e5e2ab"
+  ],
+  "ordinal": 10,
+  "id": "0-10"
+}

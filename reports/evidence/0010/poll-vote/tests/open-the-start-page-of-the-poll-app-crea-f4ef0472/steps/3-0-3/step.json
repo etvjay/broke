@@ -1,0 +1,10 @@
+{
+  "kind": "wait",
+  "status": "passed",
+  "summary": "wait: queued plan (2 steps): type \"Options, one per line\"; click \"Create poll\"",
+  "duration_ms": 3744.5,
+  "url": "http://localhost:33389/",
+  "action_id": "85302014-de18-4ffb-819f-e7c22953b02d",
+  "ordinal": 3,
+  "id": "0-3"
+}

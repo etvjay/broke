@@ -1,0 +1,16 @@
+{
+  "kind": "click",
+  "status": "passed",
+  "summary": "click: Clicking Vote next to Black in the Best tea poll",
+  "duration_ms": 4658.3,
+  "url": "http://localhost:38779/",
+  "action_id": "6f0807ee-4d5a-4642-b035-bb6e980ae46f",
+  "element_rect": {
+    "x": 1212,
+    "y": 519,
+    "width": 35,
+    "height": 19
+  },
+  "ordinal": 12,
+  "id": "0-12"
+}

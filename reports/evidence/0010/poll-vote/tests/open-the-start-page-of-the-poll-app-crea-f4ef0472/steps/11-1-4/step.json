@@ -1,0 +1,14 @@
+{
+  "kind": "analyze",
+  "status": "passed",
+  "summary": "analyze: the poll \"Favourite colour?\" shows \"Blue (1)\"",
+  "duration_ms": 10438.3,
+  "url": "http://localhost:33389/",
+  "action_id": "d63802c2-03e5-4642-8336-d42c4d28ea0d",
+  "analyze_action_ids": [
+    "1ae3a58e-ae8f-4fbb-b81c-c3229a3d2c9d",
+    "d63802c2-03e5-4642-8336-d42c4d28ea0d"
+  ],
+  "ordinal": 11,
+  "id": "1-4"
+}

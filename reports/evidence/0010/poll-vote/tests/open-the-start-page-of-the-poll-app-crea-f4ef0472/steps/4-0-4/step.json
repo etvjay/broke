@@ -1,0 +1,16 @@
+{
+  "kind": "type",
+  "status": "passed",
+  "summary": "type: Type \"Red\nBlue\" into \"Options, one per line\"",
+  "duration_ms": 102.3,
+  "url": "http://localhost:33389/",
+  "action_id": "cd1e2134-88d4-4821-bd71-c7989e7d06fc",
+  "element_rect": {
+    "x": 666,
+    "y": 206,
+    "width": 588,
+    "height": 57
+  },
+  "ordinal": 4,
+  "id": "0-4"
+}

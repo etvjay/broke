@@ -1,0 +1,10 @@
+{
+  "kind": "analyze",
+  "status": "passed",
+  "summary": "analyze: ANALYZE(textual_visual, 'The poll list contains exactly one poll with the questi",
+  "duration_ms": 13492.2,
+  "url": "http://localhost:45885/",
+  "action_id": "6b1f7bb5-1822-4896-a122-91a789ece2db",
+  "ordinal": 6,
+  "id": "0-6"
+}

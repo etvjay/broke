@@ -1,0 +1,16 @@
+{
+  "kind": "type",
+  "status": "passed",
+  "summary": "type: Typing Noodles in the poll options field",
+  "duration_ms": 3199.4,
+  "url": "http://localhost:43523/",
+  "action_id": "ac7b60ae-7b62-4517-be14-c087894f807c",
+  "element_rect": {
+    "x": 666,
+    "y": 206,
+    "width": 588,
+    "height": 57
+  },
+  "ordinal": 3,
+  "id": "0-3"
+}
