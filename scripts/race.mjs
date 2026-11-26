@@ -241,7 +241,7 @@ async function evaluateAttempt({ root, number, letter, base, racer, verifyScript
   }
   attempt.flows = summary.flows.map((flow) => ({ name: flow.name, outcome: flow.outcome, reason: flow.reason, verdict: flow.verdict ?? null }));
   attempt.drift = { ok: summary.drift.ok, problems: summary.drift.problems.length };
-  if (summary.outcome === "pass") return judged(attempt, "green", "every flow passed and drift passed.");
+  if (summary.outcome === "pass" && verify.code === 0) return judged(attempt, "green", "every flow passed and drift passed.");
   const failing = summary.flows.filter((flow) => flow.outcome === "fail").map((flow) => flow.name);
   const errored = summary.flows.filter((flow) => flow.outcome === "error").map((flow) => flow.name);
   if (summary.outcome === "fail") {
@@ -251,16 +251,33 @@ async function evaluateAttempt({ root, number, letter, base, racer, verifyScript
 }
 
 // Commits a failed race's records folder to main, without changing any code or merging any racer branch.
+// It commits only the records folder, and it stops when other files are staged in the checkout.
 export async function commitRecordsToMain({ root, number, dir }) {
   const branch = (await git(root, ["rev-parse", "--abbrev-ref", "HEAD"])).trim();
   if (branch !== "main") throw new Error(`refused: HEAD is on ${branch}, not main`);
+  if ((await git(root, ["diff", "--cached", "--name-only"])).trim() !== "") {
+    throw new Error("refused: files are staged in the main checkout. Unstage them, then the records can be committed.");
+  }
   const recordsRel = `reports/races/${padNumber(number)}`;
   if (await exists(join(root, recordsRel))) {
     throw new Error(`refused: ${recordsRel} already exists`);
   }
-  await copyRecords(dir, join(root, recordsRel));
-  await git(root, ["add", "--", recordsRel]);
-  await git(root, ["commit", "-q", "-m", `race ${padNumber(number)}: no attempt is green`, "-m", COAUTHOR]);
+  try {
+    await copyRecords(dir, join(root, recordsRel));
+    await git(root, ["add", "--", recordsRel]);
+    await git(root, [
+      "commit",
+      "-q",
+      "-m", `race ${padNumber(number)}: no attempt is green`,
+      "-m", COAUTHOR,
+      "--only", "--", recordsRel
+    ]);
+  } catch (error) {
+    // Leave main as it was: unstage and remove the records this call copied.
+    await git(root, ["reset", "-q", "--", recordsRel]).catch(() => {});
+    await rm(join(root, recordsRel), { recursive: true, force: true });
+    throw error;
+  }
   return (await git(root, ["rev-parse", "--short", "HEAD"])).trim();
 }
 

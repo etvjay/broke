@@ -243,6 +243,67 @@ test("commitRecordsToMain refuses when reports/races/NNNN already exists", async
   await assert.rejects(() => commitRecordsToMain({ root: ctx.repo, number: 1, dir: source }), /already exists/);
 });
 
+test("commitRecordsToMain refuses when other files are staged, and commits nothing", async () => {
+  const ctx = await setup();
+  const before = git(ctx.repo, ["rev-parse", "HEAD"]).trim();
+  await writeFile(join(ctx.repo, "notes.txt"), "staged by the owner\n");
+  git(ctx.repo, ["add", "--", "notes.txt"]);
+  const source = join(ctx.dir, "fake-records");
+  await mkdir(source, { recursive: true });
+  await writeFile(join(source, "comparison.md"), "new\n");
+  await assert.rejects(() => commitRecordsToMain({ root: ctx.repo, number: 1, dir: source }), /staged/);
+  assert.equal(git(ctx.repo, ["rev-parse", "HEAD"]).trim(), before);
+  assert.equal(existsSync(join(ctx.repo, "reports", "races", "0001")), false);
+  assert.match(git(ctx.repo, ["diff", "--cached", "--name-only"]), /notes\.txt/);
+});
+
+test("commitRecordsToMain leaves main clean when its commit fails", async () => {
+  const ctx = await setup();
+  const before = git(ctx.repo, ["rev-parse", "HEAD"]).trim();
+  const hooks = join(ctx.dir, "hooks");
+  await mkdir(hooks, { recursive: true });
+  await writeFile(join(hooks, "pre-commit"), "#!/bin/sh\nexit 1\n");
+  await chmod(join(hooks, "pre-commit"), 0o755);
+  const source = join(ctx.dir, "fake-records");
+  await mkdir(source, { recursive: true });
+  await writeFile(join(source, "comparison.md"), "new\n");
+  git(ctx.repo, ["config", "core.hooksPath", hooks]);
+  try {
+    await assert.rejects(() => commitRecordsToMain({ root: ctx.repo, number: 1, dir: source }));
+  } finally {
+    git(ctx.repo, ["config", "--unset", "core.hooksPath"]);
+  }
+  assert.equal(git(ctx.repo, ["rev-parse", "HEAD"]).trim(), before);
+  assert.equal(git(ctx.repo, ["status", "--porcelain"]).trim(), "");
+  assert.equal(existsSync(join(ctx.repo, "reports", "races", "0001")), false);
+});
+
+test("a sole green attempt is not merged when the main checkout is on another branch", async () => {
+  const ctx = await setup();
+  git(ctx.repo, ["checkout", "-q", "-b", "fix/side"]);
+  const before = git(ctx.repo, ["rev-parse", "main"]).trim();
+  const { code, lines } = await startRace(ctx, { a: "red", b: "green", c: "none" });
+  assert.equal(code, 2);
+  assert.match(lines.join("\n"), /not main/);
+  assert.equal(git(ctx.repo, ["rev-parse", "main"]).trim(), before);
+  assert.equal((await readLock()).state, "awaiting-pick");
+  await releaseLock();
+});
+
+test("an attempt is green only when its verify exits 0, not only when its summary says pass", async () => {
+  const ctx = await setup();
+  process.env.FAKE_VERIFY_EXIT = "1";
+  let code;
+  try {
+    ({ code } = await startRace(ctx, { a: "green", b: "none", c: "none" }));
+  } finally {
+    delete process.env.FAKE_VERIFY_EXIT;
+  }
+  assert.equal(code, 1);
+  const record = JSON.parse(await readFile(join(raceDir(1), "attempts.json"), "utf8"));
+  assert.notEqual(record.attempts[0].status, "green");
+});
+
 test("with exactly one green attempt the runner merges it automatically and writes Picked by: runner", async () => {
   const ctx = await setup();
   const before = git(ctx.repo, ["rev-parse", "HEAD"]).trim();

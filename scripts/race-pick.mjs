@@ -56,6 +56,11 @@ export async function runPick({ root = ROOT, number, letter, reason, pickedBy = 
     log("refused: the main tree has uncommitted changes.");
     return 2;
   }
+  const checkedOut = (await git(root, ["rev-parse", "--abbrev-ref", "HEAD"])).trim();
+  if (checkedOut !== "main") {
+    log(`refused: the checkout is on ${checkedOut}, not main. Main did not move.`);
+    return 2;
+  }
   const mainBefore = (await git(root, ["rev-parse", "HEAD"])).trim();
   const attemptBranch = branchName(raceNumber, letter);
   const attemptCommit = (await git(root, ["rev-parse", attemptBranch])).trim();

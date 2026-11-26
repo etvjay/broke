@@ -52,5 +52,7 @@ if (attemptOut !== null) {
   git("add", "--", `reports/${pad}.md`, `reports/${pad}.json`);
   git("commit", "-q", "-m", `report: ${pad} verify of ${head.slice(0, 7)}`, "-m", `Tested commit: ${head}`);
 }
-console.log(`fake verify: ${result} (exit ${code})`);
-process.exitCode = code;
+// FAKE_VERIFY_EXIT sets only the exit code, so a pass summary can come with a non-zero exit.
+const exitCode = process.env.FAKE_VERIFY_EXIT === undefined ? code : Number(process.env.FAKE_VERIFY_EXIT);
+console.log(`fake verify: ${result} (exit ${exitCode})`);
+process.exitCode = exitCode;
