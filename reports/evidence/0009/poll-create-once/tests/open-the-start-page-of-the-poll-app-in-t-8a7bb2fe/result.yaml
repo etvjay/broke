@@ -1,0 +1,78 @@
+evidence: '0.1'
+test: open-the-start-page-of-the-poll-app-in-t-8a7bb2fe
+status: failed
+duration_ms: 64138
+external_id:
+  session_id: dab44048-63c4-4036-aa82-abb30cd728c9
+  commit_id: dab44048-63c4-4036-aa82-abb30cd728c9
+  test_id: d5a422c2-1786-4ffc-8f81-d14bafde769f
+  testcase_id: 01M8BV2HK4W6DDXAP2J3FQET7F
+  project_id: 01M0HVQ571X8ARVW8V01B9FXH5
+  folder_id: 01M0J0NKJF28RDJD0J364SHW7G
+  org_id: '<account-id>'
+  user_name: <account>
+  user_email: <email>
+  sharable_link: https://test-manager.lambdatest.com/projects/01M0HVQ571X8ARVW8V01B9FXH5/test-cases/01M8BV2HK4W6DDXAP2J3FQET7F/dashboard/share/<share-token>?type=summary&agentView=true&fqdn=summary-page
+  execution_id: 50a33e00-ee93-48ef-9134-a70f492ab17e
+environment:
+  model: v16-alpha
+  os: Linux
+  browser: Chrome
+  browser_version: '157'
+  resolution: 1920x1080
+  platform: Desktop
+  platform_type: web
+  os_version: 7.0.0-1011-aws
+steps:
+  - id: 0-1
+    ordinal: 1
+    status: passed
+    kind: navigate
+    duration_ms: 0
+    action_id: a718c796-4fb9-43e7-9f23-ab92d3d37646
+  - id: 0-2
+    ordinal: 2
+    status: passed
+    kind: wait
+    duration_ms: 6700
+    action_id: 9e5c58e2-f57a-420e-874c-285ba17c1a00
+  - id: 0-3
+    ordinal: 3
+    status: passed
+    kind: type
+    duration_ms: 100
+    action_id: 836e39bc-a08c-437f-a3bd-b62f0da77f04
+  - id: 0-4
+    ordinal: 4
+    status: passed
+    duration_ms: 300
+  - id: 0-5
+    ordinal: 5
+    status: passed
+    kind: type
+    duration_ms: 5300
+    action_id: 69df24dc-db37-4cb4-8ecb-f0aaf4f2aa6a
+  - id: 0-6
+    ordinal: 6
+    status: passed
+    kind: click
+    duration_ms: 5200
+    action_id: 3d1011b3-40eb-43ee-b96d-461713957d9f
+  - id: 0-7
+    ordinal: 7
+    status: passed
+    kind: wait
+    duration_ms: 6900
+    action_id: f6674eaa-1587-4559-9571-45bb9a9d76f0
+  - id: 0-8
+    ordinal: 8
+    status: passed
+    kind: analyze
+    duration_ms: 11700
+    action_id: ff4c0b5c-cbc4-4b59-8024-7eb68d4c887b
+  - id: 0-9
+    ordinal: 9
+    status: failed
+    kind: assert
+    duration_ms: 0
+    action_id: 77c5ead4-4a81-420c-adc1-63a9d18f9886

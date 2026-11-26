@@ -1,0 +1,35 @@
+step: 0-6
+status: failed
+error:
+  message: 'Final verification failed: "exactly one poll with the question "Double
+    click once?" appears in the list; fail if two or more appear."'
+page_state:
+  url: http://localhost:42417/
+  screenshot: steps/6-0-6/screenshot.jpg
+console_at_failure:
+  ref: logs/0-console.ndjson
+  step: 0-6
+network_at_failure:
+  ref: logs/0-network.har
+  step: 0-6
+title: Double-clicking Create poll submits duplicate polls
+triage:
+  status: triaged
+  by:
+    kind: agent
+    id: v16-investigation/terminal
+    at: '2026-11-26T11:51:26.595712+00:00'
+  rca:
+    root_cause: The app accepts both parts of a double-click as separate poll submissions,
+      so one intended creation becomes two polls.
+    category: application_issue/functional_defect
+    confidence: 0.98
+    evidence:
+    - steps/6-0-6/annotated.png
+  verification:
+    status: not_verified
+  severity: major
+  suggested_fix:
+    summary: Disable or debounce Create poll as soon as it is pressed, and have the
+      server reject duplicate rapid submissions so a double-click can create only
+      one poll.

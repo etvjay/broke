@@ -1,0 +1,16 @@
+{
+  "kind": "type",
+  "status": "passed",
+  "summary": "type: Type \"Double click once?\" into \"Question\"",
+  "duration_ms": 143.6,
+  "url": "http://localhost:42417/",
+  "action_id": "836e39bc-a08c-437f-a3bd-b62f0da77f04",
+  "element_rect": {
+    "x": 667,
+    "y": 137,
+    "width": 586,
+    "height": 19
+  },
+  "ordinal": 3,
+  "id": "0-3"
+}

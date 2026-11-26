@@ -1,0 +1,10 @@
+{
+  "kind": "assert",
+  "status": "failed",
+  "summary": "assert: exactly one poll with the question \"Double click once?\" appears in the list; fai",
+  "duration_ms": 5.2,
+  "url": "http://localhost:42417/",
+  "action_id": "77c5ead4-4a81-420c-adc1-63a9d18f9886",
+  "ordinal": 9,
+  "id": "0-9"
+}

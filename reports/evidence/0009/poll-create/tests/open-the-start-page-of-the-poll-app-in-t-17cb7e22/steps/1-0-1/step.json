@@ -1,0 +1,10 @@
+{
+  "kind": "navigate",
+  "status": "passed",
+  "summary": "navigate: Navigate to http://localhost:33625",
+  "duration_ms": 1.0,
+  "url": "http://localhost:33625/",
+  "action_id": "a18863e2-9970-4fb1-976d-6456121cef96",
+  "ordinal": 1,
+  "id": "0-1"
+}
