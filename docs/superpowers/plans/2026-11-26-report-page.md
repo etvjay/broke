@@ -1,6 +1,6 @@
 # Report Page Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task by task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task by task, in one session and in order. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Build and host a static Why It Broke page from committed reports and race records, and let the records of a failed race reach main.
 
@@ -18,6 +18,7 @@
 - The page uses no JavaScript. Source blocks use `details` and `summary`. Use system fonts and text contrast of at least 4.5 to 1.
 - No em dashes or en dashes in page copy or new docs.
 - Commit subjects are lowercase with a type prefix (`feat:`, `ci:`), as in `git log`. End each message with the trailer in `COAUTHOR` (`scripts/lib/git.mjs`).
+- Task 1 must reach main before the owner runs a race on a real red. Otherwise a failed race's records stay on a local branch, and the page cannot show them.
 - If the spec and the code disagree, or a change outside the allowed paths seems needed, stop and tell the owner.
 
 ## Review Focus
@@ -87,7 +88,7 @@
 - [ ] **Step 3: Run `npm test`.** Every test must pass.
 - [ ] **Step 4: Commit** `feat: copy candidate screenshots outside the repo`.
 
-## Task 4: Pages workflow and go live
+## Task 4: Pages workflow
 
 **Files:**
 - Create: `.github/workflows/pages.yml`
@@ -96,14 +97,14 @@
 - [ ] **Step 1: Write the workflow.** Triggers: `push` to `main`, and `workflow_dispatch`. Permissions: `contents: read`, `pages: write`, `id-token: write`. One concurrency group, `pages`. Steps: checkout with `fetch-depth: 0`; setup-node with Node 24; `npm ci`; `npm run site`; upload the `site` folder as the Pages artifact; deploy it. Use the current major version of each official action.
 - [ ] **Step 2: Check that the YAML parses,** with `python3 -c "import yaml; yaml.safe_load(open('.github/workflows/pages.yml'))"`.
 - [ ] **Step 3: Commit** `ci: deploy the report page to GitHub Pages`.
-- [ ] **Step 4: Enable Pages with GitHub Actions as the source,** approved by the owner. Run `gh api -X POST repos/etvjay/broke/pages -f build_type=workflow`. If the site already exists, run `gh api repos/etvjay/broke/pages` to check, then set `build_type` to `workflow` with a PUT.
-- [ ] **Step 5: Push to `main`.** Watch the run with `gh run watch`. Open https://etvjay.github.io/broke/ and confirm it loads.
-- [ ] **Step 6: Check that every link on the live page resolves.** Fetch each `href` and expect a 200 status.
 
-## Task 5: Acceptance and report
+## Task 5: Review, push, and go live
 
-- [ ] Run `npm test` and `npm run drift`. Report the pass count and the drift result.
-- [ ] Run `npm run site` twice on the same commit, and compare the two outputs with `cmp`.
-- [ ] Search `site/` for token-shaped strings, email addresses, and `/home/`. Expect no matches.
-- [ ] Open the live page in a desktop browser and at phone width, with agent-browser. Check each section and each empty state. Record what you saw.
-- [ ] Report to the owner: the page URL, the test counts, the checks above, and anything not done. Claim only the checks you ran.
+- [ ] **Step 1: Run the checks.** Run `npm test` and `npm run drift`. Run `npm run site` twice on the same commit and compare the two outputs with `cmp`. All must pass, and the outputs must match.
+- [ ] **Step 2: Get a fresh review before the push.** A reviewer who did not write Tasks 1 to 4 reads `git diff origin/main..HEAD` against the spec and this plan. Fix each real defect it finds, then repeat Step 1.
+- [ ] **Step 3: Enable Pages with GitHub Actions as the source,** as the owner approved. Run `gh api -X POST repos/etvjay/broke/pages -f build_type=workflow`. If the site already exists, run `gh api repos/etvjay/broke/pages` to check it, then set `build_type` to `workflow` with a PUT.
+- [ ] **Step 4: Push to `main`.** Watch the Pages run with `gh run watch`. Open https://etvjay.github.io/broke/ and confirm it loads.
+- [ ] **Step 5: Check that every link on the live page resolves.** Fetch each `href` and expect a 200 status.
+- [ ] **Step 6: Search `site/` for token-shaped strings, email addresses, and `/home/`.** Expect no matches.
+- [ ] **Step 7: Check the live page in a desktop browser and at phone width,** with agent-browser. Check each section and each empty state. Record what you saw.
+- [ ] **Step 8: Report to the owner.** Give the page URL, the test counts, the checks above, and anything not done. Claim only the checks you ran.

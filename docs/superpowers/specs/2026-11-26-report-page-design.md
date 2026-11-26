@@ -55,9 +55,9 @@ A race with a green attempt keeps its records on a local branch until the pick, 
 
 Cost if wrong: main gains one commit per failed race. Anyone who expects main to equal the red commit will see extra history. The start rule is the riskiest change, so tests must show that a race refuses after a code change.
 
-## Open for the owner
+## Closed races (decided 26 Nov)
 
-- A green race that the owner closes with `npm run race:close -- NNNN` stays off the page, because its records stay on its local branch. Default: off. Say so if it should show. It would follow the same rule as a failed race.
+A green race that the owner closes with `npm run race:close -- NNNN` stays off the page. Its records stay on its local branch. The owner chose this, because the decision to show failed races does not cover closed races.
 
 ## Design calls (checked against the code)
 
