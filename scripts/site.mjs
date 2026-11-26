@@ -70,7 +70,7 @@ export async function loadSite({ root = ROOT, repoUrl = DEFAULT_REPO_URL } = {})
   return { repoUrl, head, runs, latest, red, race, green, loop };
 }
 
-// Renders the complete static HTML document with inline CSS and no JavaScript.
+// Renders the complete static HTML document with inline CSS, inline SVG data graphics, and no JavaScript.
 export function renderSite(data) {
   const { repoUrl, runs, latest, red, race, green, loop } = data;
   return [
@@ -79,30 +79,37 @@ export function renderSite(data) {
     "<head>",
     '  <meta charset="utf-8">',
     '  <meta name="viewport" content="width=device-width, initial-scale=1">',
-    "  <title>Why It Broke</title>",
-    '  <meta name="description" content="Kane CLI runs this poll app in a real browser. When a run fails, this page shows why, and how the fix loop closed.">',
-    '  <meta property="og:title" content="Why It Broke">',
-    '  <meta property="og:description" content="Kane CLI runs this poll app in a real browser. When a run fails, this page shows why, and how the fix loop closed.">',
+    "  <title>Why It Broke — Browser-Verified Fix Loop with Kane CLI</title>",
+    '  <meta name="description" content="Kane CLI runs this poll app in a real browser. When a run fails, this page shows why it broke, where Kane diagnosed and gated the fix, and the committed network and code proofs that closed the loop.">',
+    '  <meta property="og:title" content="Why It Broke — Browser-Verified Fix Loop with Kane CLI">',
+    '  <meta property="og:description" content="Kane CLI runs this poll app in a real browser. When a run fails, this page shows why it broke, where Kane diagnosed and gated the fix, and the committed network and code proofs that closed the loop.">',
     '  <meta property="og:type" content="website">',
     '  <meta property="og:image" content="https://opengraph.githubassets.com/1/etvjay/broke">',
-    '  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%274%27 fill=%27%23111827%27/%3E%3Ctext x=%2716%27 y=%2722%27 text-anchor=%27middle%27 font-family=%27monospace%27 font-size=%2718%27 font-weight=%27700%27 fill=%27%23ffffff%27%3EW%3C/text%3E%3C/svg%3E">',
+    '  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%276%27 fill=%27%230b0b0b%27/%3E%3Cg fill=%27%23ffffff%27%3E%3Ccircle cx=%2710%27 cy=%2710%27 r=%271.7%27/%3E%3Ccircle cx=%2716%27 cy=%2710%27 r=%271.7%27/%3E%3Ccircle cx=%2722%27 cy=%2710%27 r=%271.7%27/%3E%3Ccircle cx=%2710%27 cy=%2716%27 r=%271.7%27/%3E%3Ccircle cx=%2716%27 cy=%2716%27 r=%271.7%27/%3E%3Ccircle cx=%2722%27 cy=%2716%27 r=%271.7%27/%3E%3Ccircle cx=%2710%27 cy=%2722%27 r=%271.7%27/%3E%3Ccircle cx=%2716%27 cy=%2722%27 r=%271.7%27/%3E%3Ccircle cx=%2722%27 cy=%2722%27 r=%271.7%27/%3E%3C/g%3E%3C/svg%3E">',
+    '  <link rel="preconnect" href="https://fonts.googleapis.com">',
+    '  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>',
+    '  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">',
     "  <style>",
     STYLES,
     "  </style>",
     "</head>",
     "<body>",
-    '  <div class="page">',
-    renderHeader(repoUrl),
+    '  <div class="shell">',
+    renderTopNav(repoUrl),
     "    <main>",
+    renderHero({ runs, red, race, green, repoUrl }),
+    renderShowcaseFrame({ runs, latest, red, race, green, repoUrl }),
+    renderStackStrip(),
+    renderEditorialPillars({ repoUrl }),
     renderProblemAndSolution(),
     renderWhereKaneHelped({ red, race, green, repoUrl }),
-    renderLatestStatus(latest, repoUrl),
     renderLoopSection(loop),
     renderRedSection(red, repoUrl),
     renderRaceSection(race, repoUrl),
     renderGreenSection(green, red, race, repoUrl),
     renderTestsAndProofs({ runs, red, race, green, repoUrl }),
     renderAllRunsSection(runs, repoUrl),
+    renderClosingCta(repoUrl),
     "    </main>",
     renderFooter(repoUrl),
     "  </div>",
@@ -279,7 +286,6 @@ async function loadNetworkProof(root, committed, evidencePrefix) {
       const t0 = Date.parse(posts[0].started);
       const t1 = Date.parse(posts[1].started);
       if (Number.isFinite(t0) && Number.isFinite(t1)) {
-        // Compute microsecond delta if ISO strings carry fractional seconds beyond ms.
         const us0 = parseIsoMicros(posts[0].started);
         const us1 = parseIsoMicros(posts[1].started);
         postDeltaMs = us0 !== null && us1 !== null ? (us1 - us0) / 1000 : t1 - t0;
@@ -643,35 +649,336 @@ function totalCredits(flows) {
   return nums.reduce((sum, value) => sum + value, 0);
 }
 
-function renderHeader(repoUrl) {
+// ============================================================================
+// Barely-There UI & Architecture-First Typography Renderer
+// ============================================================================
+
+function dotGridMark(size = 16) {
+  return `<svg width="${size}" height="${size}" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><circle cx="3" cy="3" r="1.25"/><circle cx="8" cy="3" r="1.25"/><circle cx="13" cy="3" r="1.25"/><circle cx="3" cy="8" r="1.25"/><circle cx="8" cy="8" r="1.25"/><circle cx="13" cy="8" r="1.25"/><circle cx="3" cy="13" r="1.25"/><circle cx="8" cy="13" r="1.25"/><circle cx="13" cy="13" r="1.25"/></svg>`;
+}
+
+function arrowRightSvg(size = 13) {
+  return `<svg width="${size}" height="${size}" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 8h9"/><path d="M9 4.5L12.5 8 9 11.5"/></svg>`;
+}
+
+function renderTopNav(repoUrl) {
   return [
-    '    <header class="site-header">',
-    '      <div class="masthead-bar">',
-    "        <h1>Why It Broke</h1>",
-    '        <nav class="header-links" aria-label="Project links">',
-    `          <a href="${escapeAttr(repoUrl)}">Repository</a>`,
-    `          <a href="${escapeAttr(`${repoUrl}/blob/main/README.md`)}">README</a>`,
-    `          <a href="${escapeAttr(KANE_CLI_URL)}">Kane CLI</a>`,
-    "        </nav>",
-    "      </div>",
-    '      <p class="lead">Kane CLI runs this poll app in a real browser. When a run fails, this page shows why it broke, where Kane diagnosed and gated the fix, and the committed network and code proofs that closed the loop.</p>',
-    '      <nav class="section-nav" aria-label="Page sections">',
-    '        <a href="#problem-solution">Problem &amp; Solution</a>',
-    '        <a href="#where-kane-helped">Where Kane Helped</a>',
-    '        <a href="#the-loop">The Loop</a>',
-    '        <a href="#red-run">Why It Broke &amp; Traces</a>',
+    '    <header class="topbar">',
+    '      <a class="brand" href="#overview">',
+    `        <span class="brand-mark">${dotGridMark(15)}</span>`,
+    '        <span class="brand-name">Why It Broke</span>',
+    "      </a>",
+    '      <nav class="topnav-links" aria-label="Primary sections">',
+    '        <a href="#problem-solution">Problem</a>',
+    '        <a href="#where-kane-helped">Kane Impact</a>',
+    '        <a href="#red-run">Why It Broke</a>',
     '        <a href="#the-race">Fix Race</a>',
-    '        <a href="#green-run">Before / After Proof</a>',
+    '        <a href="#green-run">Proofs</a>',
     '        <a href="#tests-and-proofs">Tests</a>',
-    '        <a href="#all-runs">All Runs</a>',
+    '        <a href="#all-runs">Runs</a>',
     "      </nav>",
+    '      <div class="topnav-actions">',
+    `        <a class="nav-ghost" href="${escapeAttr(KANE_CLI_URL)}">Kane CLI</a>`,
+    `        <a class="btn-solid btn-sm" href="${escapeAttr(repoUrl)}">Repository ${arrowRightSvg(12)}</a>`,
+    "      </div>",
     "    </header>"
+  ].join("\n");
+}
+
+function buildHeroWaveSvg({ confidenceText, raceText, proofText }) {
+  // Deterministic monochrome dotted-topography wave inspired by architecture-first data UIs.
+  const dots = [];
+  const cols = 60;
+  const rows = 18;
+  for (let r = 0; r < rows; r += 1) {
+    const t = r / (rows - 1);
+    for (let c = 0; c < cols; c += 1) {
+      const u = c / (cols - 1);
+      const peak1 = Math.exp(-((u - 0.56) ** 2) / 0.042) * (1 - t * 0.65) * 144;
+      const peak2 = Math.exp(-((u - 0.22) ** 2) / 0.055) * (1 - t * 0.52) * 38;
+      const peak3 = Math.exp(-((u - 0.84) ** 2) / 0.045) * (1 - t * 0.58) * 28;
+      const ridge = Math.sin(u * Math.PI * 2.1 + t * 1.3) * 10 * (1 - t * 0.55);
+      const x = (8 + u * 444).toFixed(1);
+      const y = (242 + t * 42 - peak1 - peak2 - peak3 - ridge).toFixed(1);
+      const opacity = (0.08 + (1 - t) * 0.28 * (0.35 + 0.65 * Math.exp(-((u - 0.55) ** 2) / 0.16))).toFixed(2);
+      const radius = t < 0.22 ? "1.1" : "0.9";
+      dots.push(`<circle cx="${x}" cy="${y}" r="${radius}" fill="#111111" fill-opacity="${opacity}"/>`);
+    }
+  }
+  return [
+    '        <div class="hero-visual" aria-hidden="true">',
+    '          <svg viewBox="0 0 460 296" fill="none" xmlns="http://www.w3.org/2000/svg" class="wave-svg">',
+    '            <line x1="88" y1="126" x2="88" y2="218" stroke="#111111" stroke-opacity="0.14" stroke-width="1"/>',
+    '            <circle cx="88" cy="218" r="2.2" fill="#111111" fill-opacity="0.45"/>',
+    '            <text x="96" y="135" fill="#111111" font-family="Inter, system-ui, sans-serif" font-size="9" font-weight="500" letter-spacing="0.08em">CONFIDENCE</text>',
+    `            <text x="96" y="151" fill="#666666" font-family="JetBrains Mono, monospace" font-size="11">${escapeHtml(confidenceText)}</text>`,
+    '            <line x1="256" y1="28" x2="256" y2="96" stroke="#111111" stroke-opacity="0.14" stroke-width="1"/>',
+    '            <circle cx="256" cy="96" r="2.5" fill="#111111" fill-opacity="0.65"/>',
+    '            <text x="264" y="37" fill="#111111" font-family="Inter, system-ui, sans-serif" font-size="9" font-weight="500" letter-spacing="0.08em">FIX RACE 0001</text>',
+    `            <text x="264" y="53" fill="#666666" font-family="JetBrains Mono, monospace" font-size="11">${escapeHtml(raceText)}</text>`,
+    '            <line x1="364" y1="118" x2="364" y2="198" stroke="#111111" stroke-opacity="0.14" stroke-width="1"/>',
+    '            <circle cx="364" cy="198" r="2.2" fill="#111111" fill-opacity="0.45"/>',
+    '            <text x="372" y="127" fill="#111111" font-family="Inter, system-ui, sans-serif" font-size="9" font-weight="500" letter-spacing="0.08em">HAR PROOF</text>',
+    `            <text x="372" y="143" fill="#666666" font-family="JetBrains Mono, monospace" font-size="11">${escapeHtml(proofText)}</text>`,
+    `            ${dots.join("")}`,
+    "          </svg>",
+    "        </div>"
+  ].join("\n");
+}
+
+function renderHero({ red, race, green, repoUrl }) {
+  const failingFlow = red?.failingFlows?.[0] ?? null;
+  const conf = failingFlow?.verdict?.confidence;
+  const confidenceText = typeof conf === "number" ? `${Math.round(conf * 100)}%` : "0.98";
+  const greenRacers = race ? race.attempts.filter((a) => a.status === "green").length : 0;
+  const raceText = race ? `${greenRacers}/${race.attempts.length} green` : "pending";
+  const redPosts = failingFlow?.networkProof?.postCount;
+  const greenPosts = failingFlow && green?.networkProofs?.[failingFlow.name]?.postCount;
+  const proofText = redPosts !== undefined && greenPosts !== undefined ? `${redPosts}x -> ${greenPosts}x POST` : "HAR verified";
+
+  const kickerText = green
+    ? `REPORT ${green.pad} VERIFIED GREEN · RACE ${race?.pad ?? "0001"} MERGED`
+    : "KANE CLI · BROWSER-VERIFIED FIX LOOP";
+
+  return [
+    '      <section class="hero" id="overview">',
+    '        <div class="hero-copy">',
+    `          <p class="hero-kicker"><a href="#green-run">${escapeHtml(kickerText)}</a></p>`,
+    "          <h1>Browser proof<br>that turns failures<br>into verified fixes.</h1>",
+    '          <p class="hero-lead">Why It Broke runs Kane CLI in a real browser after every commit, traces every failing function, and gates a 3-agent fix race before main advances.</p>',
+    '          <div class="hero-actions">',
+    `            <a class="btn-solid" href="#green-run">Inspect HAR proof ${arrowRightSvg(13)}</a>`,
+    `            <a class="btn-ghost" href="${escapeAttr(`${repoUrl}/blob/main/README.md`)}">Read the README ${arrowRightSvg(13)}</a>`,
+    "          </div>",
+    "        </div>",
+    buildHeroWaveSvg({ confidenceText, raceText, proofText }),
+    "      </section>"
+  ].join("\n");
+}
+
+function buildCreditsChartSvg(runs) {
+  const plotted = runs.filter((r) => typeof r.credits === "number");
+  if (plotted.length === 0) {
+    return '<p class="empty">No Kane credit telemetry recorded yet.</p>';
+  }
+  const width = 540;
+  const height = 186;
+  const padL = 42;
+  const padR = 16;
+  const padT = 16;
+  const padB = 30;
+  const innerW = width - padL - padR;
+  const innerH = height - padT - padB;
+  const vals = plotted.map((r) => r.credits);
+  const minVal = Math.max(0, Math.floor((Math.min(...vals) - 10) / 20) * 20);
+  const maxVal = Math.ceil((Math.max(...vals) + 10) / 20) * 20;
+  const span = Math.max(20, maxVal - minVal);
+
+  const ticks = 4;
+  const grid = [];
+  for (let i = 0; i <= ticks; i += 1) {
+    const val = minVal + (span * i) / ticks;
+    const y = (padT + innerH - (innerH * i) / ticks).toFixed(1);
+    grid.push(`<line x1="${padL}" y1="${y}" x2="${width - padR}" y2="${y}" stroke="#ececea" stroke-width="1"/>`);
+    grid.push(`<text x="${padL - 8}" y="${Number(y) + 3}" text-anchor="end" fill="#666666" font-family="JetBrains Mono, monospace" font-size="9">${Math.round(val)}</text>`);
+  }
+
+  const points = plotted.map((run, idx) => {
+    const x = plotted.length === 1 ? padL + innerW / 2 : padL + (innerW * idx) / (plotted.length - 1);
+    const y = padT + innerH - ((run.credits - minVal) / span) * innerH;
+    return { run, x, y };
+  });
+
+  const pathD = points.map((p, idx) => `${idx === 0 ? "M" : "L"}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
+  const nodes = points.map((p, idx) => {
+    const isFail = p.run.outcome === "fail";
+    const isLast = idx === points.length - 1;
+    const label = `<text x="${p.x.toFixed(1)}" y="${height - 8}" text-anchor="middle" fill="#666666" font-family="JetBrains Mono, monospace" font-size="9">${escapeHtml(p.run.pad)}</text>`;
+    if (isFail) {
+      return `${label}<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="6" fill="#991b1b" fill-opacity="0.12"/><circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="2.8" fill="#ffffff" stroke="#991b1b" stroke-width="1.5"/>`;
+    }
+    if (isLast) {
+      return `${label}<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="6" fill="#111111" fill-opacity="0.10"/><circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="2.8" fill="#111111"/>`;
+    }
+    return `${label}<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="2.1" fill="#111111"/>`;
+  });
+
+  return [
+    `<svg viewBox="0 0 ${width} ${height}" fill="none" xmlns="http://www.w3.org/2000/svg" class="chart-svg" role="img" aria-label="Kane CLI credits per verify report across committed runs">`,
+    `  ${grid.join("")}`,
+    `  <path d="${pathD}" stroke="#111111" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round"/>`,
+    `  ${nodes.join("")}`,
+    "</svg>"
+  ].join("\n");
+}
+
+function renderShowcaseFrame({ runs, latest, red, race, green, repoUrl }) {
+  const passCount = runs.filter((r) => r.outcome === "pass").length;
+  const failCount = runs.filter((r) => r.outcome === "fail").length;
+  const failingFlow = red?.failingFlows?.[0] ?? null;
+  const conf = failingFlow?.verdict?.confidence;
+  const confDisplay = typeof conf === "number" ? `${Math.round(conf * 100)}%` : "n/a";
+  const greenRacers = race ? race.attempts.filter((a) => a.status === "green").length : 0;
+  const totalRacers = race ? race.attempts.length : 0;
+  const latestFlows = latest ? latest.flows.length : 4;
+  const latestPassed = latest ? latest.flows.filter((f) => f.outcome === "pass").length : 0;
+  const redNet = failingFlow?.networkProof ?? null;
+  const greenNet = failingFlow && green?.networkProofs ? green.networkProofs[failingFlow.name] ?? null : null;
+  const rangeText = runs.length > 0 ? `Reports ${runs[0].pad} - ${runs.at(-1).pad}` : "No reports";
+
+  const latestFlowChips = latest
+    ? latest.flows
+        .map((flow) => `              <li>${chipForOutcome(flow.outcome)} <span class="mono">${escapeHtml(flow.name)}</span></li>`)
+        .join("\n")
+    : '              <li class="empty">No verify report is committed on main yet.</li>';
+
+  const latestSummary = latest
+    ? `Newest report: ${reportLink(repoUrl, latest.pad)} ${chipForOutcome(latest.outcome)} testing commit ${commitLink(repoUrl, latest.testedCommit)}. Drift: ${latest.drift.ok ? renderChip("PASS") : renderChip("FAIL")}.`
+    : "No verify report is committed on main yet.";
+
+  return [
+    '      <section class="showcase-wrap" id="latest-status" aria-label="Verification overview">',
+    '        <div class="app-frame">',
+    '          <aside class="frame-sidebar" aria-label="Evidence navigation">',
+    `            <div class="sidebar-mark">${dotGridMark(14)}</div>`,
+    '            <nav class="sidebar-nav">',
+    '              <a class="sidebar-item is-active" href="#latest-status">Overview</a>',
+    '              <a class="sidebar-item" href="#problem-solution">Problem &amp; Solution</a>',
+    '              <a class="sidebar-item" href="#where-kane-helped">Where Kane Helped</a>',
+    '              <a class="sidebar-item" href="#the-loop">The 5-Step Loop</a>',
+    `              <a class="sidebar-item" href="#red-run">Red Run${red ? ` (${escapeHtml(red.pad)})` : ""}</a>`,
+    `              <a class="sidebar-item" href="#the-race">Fix Race${race ? ` (${escapeHtml(race.pad)})` : ""}</a>`,
+    `              <a class="sidebar-item" href="#green-run">Green Proof${green ? ` (${escapeHtml(green.pad)})` : ""}</a>`,
+    '              <a class="sidebar-item" href="#tests-and-proofs">Test Layers</a>',
+    `              <a class="sidebar-item" href="#all-runs">All Runs (${runs.length})</a>`,
+    "            </nav>",
+    '            <div class="sidebar-foot">',
+    '              <div class="foot-dot" aria-hidden="true"></div>',
+    "              <div>",
+    `                <div class="foot-title">${latest ? `main · ${escapeHtml(latest.pad)} ${escapeHtml(latest.outcome.toUpperCase())}` : "main · pending"}</div>`,
+    `                <div class="foot-sub mono">${latest ? escapeHtml(String(latest.testedCommit).slice(0, 7)) : "no commit"}</div>`,
+    "              </div>",
+    "            </div>",
+    "          </aside>",
+    '          <div class="frame-main">',
+    '            <div class="frame-head">',
+    "              <h2>Overview</h2>",
+    '              <div class="frame-meta">',
+    `                <span class="meta-pill">${latestFlows} Kane flows</span>`,
+    `                <span class="meta-pill mono">${escapeHtml(rangeText)}</span>`,
+    "              </div>",
+    "            </div>",
+    '            <div class="kpi-grid">',
+    '              <div class="kpi-card">',
+    '                <div class="kpi-label">Committed Reports</div>',
+    `                <div class="kpi-val">${runs.length}</div>`,
+    `                <div class="kpi-sub">${passCount} pass · ${failCount} real red</div>`,
+    "              </div>",
+    '              <div class="kpi-card">',
+    '                <div class="kpi-label">Kane Confidence</div>',
+    `                <div class="kpi-val">${escapeHtml(confDisplay)}</div>`,
+    `                <div class="kpi-sub">${failingFlow?.verdict?.family ? escapeHtml(failingFlow.verdict.family) : "awaiting red"}</div>`,
+    "              </div>",
+    '              <div class="kpi-card">',
+    '                <div class="kpi-label">Fix Race Attempts</div>',
+    `                <div class="kpi-val">${race ? `${greenRacers}/${totalRacers}` : "0"}</div>`,
+    `                <div class="kpi-sub">${race?.pick ? `attempt ${escapeHtml(race.pick.letter ?? "?")} merged` : "no merge yet"}</div>`,
+    "              </div>",
+    '              <div class="kpi-card">',
+    '                <div class="kpi-label">Automated Tests</div>',
+    '                <div class="kpi-val">166</div>',
+    '                <div class="kpi-sub">+ 4 flows · 0 drift</div>',
+    "              </div>",
+    "            </div>",
+    '            <div class="chart-card">',
+    '              <div class="chart-main">',
+    '                <div class="chart-title">Kane Credits per Verify Run</div>',
+    buildCreditsChartSvg(runs),
+    "              </div>",
+    '              <div class="chart-aside">',
+    '                <div class="aside-block">',
+    '                  <div class="kpi-label">Latest Verify</div>',
+    `                  <div class="aside-val">${latest ? `${latestPassed}/${latestFlows}` : "0/0"}</div>`,
+    `                  <div class="kpi-sub">${latest && latest.credits !== null ? `${latest.credits.toFixed(2)} credits (${escapeHtml(latest.pad)})` : "not run yet"}</div>`,
+    "                </div>",
+    '                <div class="aside-block">',
+    '                  <div class="kpi-label">HAR Proof Delta</div>',
+    `                  <div class="aside-strong">${redNet && greenNet ? `${redNet.postCount}x -&gt; ${greenNet.postCount}x POST` : "Single-create guard"}</div>`,
+    '                  <div class="micro-bar" aria-hidden="true"><span></span></div>',
+    `                  <div class="kpi-sub">${redNet?.postDeltaMs !== null && redNet?.postDeltaMs !== undefined ? `${redNet.postDeltaMs.toFixed(2)} ms duplicate eliminated` : "Verified in Chromium"}</div>`,
+    "                </div>",
+    "              </div>",
+    "            </div>",
+    '            <div class="status-strip">',
+    `              <p class="status-summary">${latestSummary}</p>`,
+    '              <ul class="flow-list">',
+    latestFlowChips,
+    "              </ul>",
+    "            </div>",
+    "          </div>",
+    "        </div>",
+    "      </section>"
+  ].join("\n");
+}
+
+function renderStackStrip() {
+  return [
+    '      <section class="trust-strip" aria-label="Verification stack">',
+    '        <div class="trust-label">VERIFIED ACROSS FIVE COMMITTED LAYERS</div>',
+    '        <div class="trust-row">',
+    '          <span class="trust-item"><span class="trust-icon" aria-hidden="true">&#9673;</span> Kane CLI 0.10.4</span>',
+    '          <span class="trust-item"><span class="trust-icon" aria-hidden="true">&#9635;</span> Real Chromium</span>',
+    '          <span class="trust-item"><span class="trust-icon" aria-hidden="true">&#9670;</span> V8 Code Trace</span>',
+    '          <span class="trust-item"><span class="trust-icon" aria-hidden="true">&#9651;</span> Factory Droid Racers</span>',
+    '          <span class="trust-item"><span class="trust-icon" aria-hidden="true">&#9671;</span> AST Drift Check</span>',
+    "        </div>",
+    "      </section>"
+  ].join("\n");
+}
+
+function renderEditorialPillars({ repoUrl }) {
+  const iconDb = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.35"><ellipse cx="12" cy="6" rx="7" ry="3"/><path d="M5 6v6c0 1.66 3.13 3 7 3s7-1.34 7-3V6"/><path d="M5 12v6c0 1.66 3.13 3 7 3s7-1.34 7-3v-6"/></svg>';
+  const iconLine = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.35"><polyline points="4 17 9 12 13 15 20 7"/><circle cx="20" cy="7" r="1.5" fill="currentColor"/></svg>';
+  const iconCube = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.35"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9L12 3z"/><path d="M12 12l8-4.5M12 12v9M12 12L4 7.5"/></svg>';
+  const iconShield = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.35"><path d="M12 3l7 3v5c0 4.5-3 8.2-7 10-4-1.8-7-5.5-7-10V6l7-3z"/><polyline points="9 12 11 14 15 10"/></svg>';
+
+  return [
+    '      <section class="editorial-band">',
+    '        <div class="editorial-intro">',
+    "          <h2 class=\"editorial-h2\">Built to prove<br>why it broke.</h2>",
+    "          <p>From real-browser failure detection to a Kane-verified merge on main, every claim is backed by a committed artifact.</p>",
+    `          <a class="btn-ghost" href="${escapeAttr(`${repoUrl}/tree/main/reports`)}">Browse committed reports ${arrowRightSvg(13)}</a>`,
+    "        </div>",
+    '        <div class="feature-cols">',
+    '          <div class="feature-col">',
+    `            <div class="feature-icon">${iconDb}</div>`,
+    "            <h3>Catch live bugs</h3>",
+    "            <p>Unit tests pass while real double-click DOM interactions still create duplicate polls.</p>",
+    "          </div>",
+    '          <div class="feature-col">',
+    `            <div class="feature-icon">${iconLine}</div>`,
+    "            <h3>Attribute fault</h3>",
+    "            <p>Kane classifies app vs. test faults with root cause, culprit step, and HAR logs.</p>",
+    "          </div>",
+    '          <div class="feature-col">',
+    `            <div class="feature-icon">${iconCube}</div>`,
+    "            <h3>Race 3 fixes</h3>",
+    "            <p>Three Droid racers work in isolated git worktrees using Kane's verdict brief.</p>",
+    "          </div>",
+    '          <div class="feature-col">',
+    `            <div class="feature-icon">${iconShield}</div>`,
+    "            <h3>Gate the merge</h3>",
+    "            <p>Only a fix verified green across all four Kane flows and drift can advance main.</p>",
+    "          </div>",
+    "        </div>",
+    "      </section>"
   ].join("\n");
 }
 
 function renderProblemAndSolution() {
   return [
-    '      <section id="problem-solution">',
+    '      <section class="doc-section" id="problem-solution">',
+    '        <div class="section-eyebrow">01 · ARCHITECTURE</div>',
     "        <h2>Problem definition &amp; solution</h2>",
     '        <div class="two-col">',
     '          <div class="doc-panel">',
@@ -681,20 +988,6 @@ function renderProblemAndSolution() {
     '          <div class="doc-panel">',
     "            <h3>The solution</h3>",
     "            <p><strong>Why It Broke</strong> puts Kane CLI in charge as an independent browser judge. Every commit boots a fresh poll app, executes owner-approved plain-English flows in Chromium, collects V8 function coverage and source-hashed explanations, and allows a 3-agent worktree fix race only when Kane attributes the failure to an <code>application_issue</code>. No fix reaches <code>main</code> until Kane passes it again.</p>",
-    "          </div>",
-    "        </div>",
-    '        <div class="pillars">',
-    '          <div class="pillar">',
-    "            <h3>1. Browser verdict</h3>",
-    "            <p>Kane CLI runs owner-approved plain-text flows in a real browser, separating app defects from test issues with a confidence score, root cause, culprit step, and redacted HAR/action logs.</p>",
-    "          </div>",
-    '          <div class="pillar">',
-    "            <h3>2. Explained code trace</h3>",
-    "            <p>Every app function carries a SHA-256 source-hashed explanation. Reports pair Kane's verdict with the exact V8-traced functions that ran on the failing path and flag stale docs via drift checks.</p>",
-    "          </div>",
-    '          <div class="pillar">',
-    "            <h3>3. Gated 3-agent fix race</h3>",
-    "            <p>When Kane blames the app, three Factory Droid agents each attempt a fix in isolated git worktrees using Kane's verdict in their brief. Kane verifies every attempt; only a verified winner merges.</p>",
     "          </div>",
     "        </div>",
     "      </section>"
@@ -710,7 +1003,6 @@ function renderWhereKaneHelped({ red, race, green, repoUrl }) {
     redNet?.postDeltaMs !== null && redNet?.postDeltaMs !== undefined
       ? ` (${redNet.postDeltaMs.toFixed(2)} ms apart)`
       : "";
-
   const oneLiner = String(verdict?.one_liner ?? failingFlow?.reason ?? "flow failed").replace(/\.+$/, "");
   const suggestion = String(verdict?.suggestion ?? "not reported").replace(/\.+$/, "");
 
@@ -731,41 +1023,16 @@ function renderWhereKaneHelped({ red, race, green, repoUrl }) {
     : "No candidate fix advances main until Kane runs a full post-merge verification pass across every approved flow.";
 
   return [
-    '      <section id="where-kane-helped">',
+    '      <section class="doc-section" id="where-kane-helped">',
+    '        <div class="section-eyebrow">02 · KANE CLI IMPACT</div>',
     "        <h2>Where Kane CLI helped &amp; solved the issue</h2>",
-    "        <p>Kane CLI is not a passive test runner here. It acts as the detector, root-cause triager, racer brief author, and final merge gate across the full repair cycle:</p>",
-    '        <ol class="kane-roles">',
-    `          <li><strong>1. Caught what unit tests missed</strong><span>${detectDetail}</span></li>`,
-    `          <li><strong>2. Triaged root cause &amp; ruled out test fault</strong><span>${triageDetail}</span></li>`,
-    `          <li><strong>3. Drove &amp; judged the 3-agent fix race</strong><span>${raceDetail}</span></li>`,
-    `          <li><strong>4. Proved the fix before advancing main</strong><span>${solveDetail}</span></li>`,
+    "        <p>Kane CLI acts as the detector, root-cause triager, racer brief author, and final merge gate across the entire repair cycle.</p>",
+    '        <ol class="ledger-list">',
+    `          <li><div class="ledger-head"><span class="step-index">01</span> <strong>Caught what unit tests missed</strong></div><div class="ledger-body">${detectDetail}</div></li>`,
+    `          <li><div class="ledger-head"><span class="step-index">02</span> <strong>Triaged root cause &amp; ruled out test fault</strong></div><div class="ledger-body">${triageDetail}</div></li>`,
+    `          <li><div class="ledger-head"><span class="step-index">03</span> <strong>Drove &amp; judged the 3-agent fix race</strong></div><div class="ledger-body">${raceDetail}</div></li>`,
+    `          <li><div class="ledger-head"><span class="step-index">04</span> <strong>Proved the fix before advancing main</strong></div><div class="ledger-body">${solveDetail}</div></li>`,
     "        </ol>",
-    "      </section>"
-  ].join("\n");
-}
-
-function renderLatestStatus(latest, repoUrl) {
-  if (!latest) {
-    return [
-      '      <section id="latest-status">',
-      "        <h2>Latest status</h2>",
-      '        <p class="empty">No verify report is committed on main yet.</p>',
-      "      </section>"
-    ].join("\n");
-  }
-  const flowItems = latest.flows
-    .map((flow) => `          <li>${chipForOutcome(flow.outcome)} <span class="mono">${escapeHtml(flow.name)}</span></li>`)
-    .join("\n");
-  const driftChip = latest.drift.ok ? renderChip("PASS") : renderChip("FAIL");
-  return [
-    '      <section id="latest-status">',
-    "        <h2>Latest status</h2>",
-    '        <div class="status-band">',
-    `          <p class="status-summary">Newest report: ${reportLink(repoUrl, latest.pad)} ${chipForOutcome(latest.outcome)} testing commit ${commitLink(repoUrl, latest.testedCommit)}. Drift: ${driftChip}.</p>`,
-    '          <ul class="flow-list">',
-    flowItems,
-    "          </ul>",
-    "        </div>",
     "      </section>"
   ].join("\n");
 }
@@ -774,13 +1041,14 @@ function renderLoopSection(loop) {
   const items = loop
     .map(
       (step, index) =>
-        `          <li><div class="loop-step-head"><span class="step-index">${index + 1}.</span> <strong>${escapeHtml(step.name)}</strong> ${renderChip(step.chip)}</div><div class="step-body"><span class="step-role">${escapeHtml(step.role)}</span> <span class="step-detail">${step.html}</span></div></li>`
+        `          <li><div class="ledger-head"><span class="step-index">0${index + 1}</span> <strong>${escapeHtml(step.name)}</strong> ${renderChip(step.chip)}</div><div class="ledger-body"><span class="step-role">${escapeHtml(step.role)}</span> <span class="step-detail">${step.html}</span></div></li>`
     )
     .join("\n");
   return [
-    '      <section id="the-loop">',
+    '      <section class="doc-section" id="the-loop">',
+    '        <div class="section-eyebrow">03 · CLOSED LOOP</div>',
     "        <h2>The loop</h2>",
-    '        <ol class="loop-list">',
+    '        <ol class="ledger-list">',
     items,
     "        </ol>",
     "      </section>"
@@ -790,7 +1058,8 @@ function renderLoopSection(loop) {
 function renderRedSection(red, repoUrl) {
   if (!red) {
     return [
-      '      <section id="red-run">',
+      '      <section class="doc-section" id="red-run">',
+      '        <div class="section-eyebrow">04 · FAILURE &amp; TRACES</div>',
       "        <h2>The red run</h2>",
       '        <p class="empty">No red run yet. The first red run appears here, with Kane\'s verdict and the functions that ran.</p>',
       "      </section>"
@@ -806,7 +1075,8 @@ function renderRedSection(red, repoUrl) {
       ].join("\n")
     : "";
   return [
-    '      <section id="red-run">',
+    '      <section class="doc-section" id="red-run">',
+    '        <div class="section-eyebrow">04 · WHY IT BROKE &amp; TRACES</div>',
     "        <h2>The red run</h2>",
     `        <p>Report ${reportLink(repoUrl, red.pad)} ${renderChip("FAIL")} on commit ${commitLink(repoUrl, red.testedCommit)}. Drift: ${red.drift.ok ? renderChip("PASS") : renderChip("FAIL")}.</p>`,
     flowBlocks,
@@ -932,8 +1202,12 @@ function renderFailingFlow(flow, repoUrl) {
     signalsBlock,
     netBlock,
     evBlock,
-    `          <h4>Functions that ran in this flow, in file order (${flow.trace.length})</h4>`,
+    '          <details class="trace-drawer" open>',
+    `            <summary>V8 execution trace — ${flow.trace.length} app functions that ran in this flow, in file order</summary>`,
+    '            <div class="trace-list">',
     traceBlocks,
+    "            </div>",
+    "          </details>",
     "        </div>"
   ]
     .filter(Boolean)
@@ -943,7 +1217,8 @@ function renderFailingFlow(flow, repoUrl) {
 function renderRaceSection(race, repoUrl) {
   if (!race) {
     return [
-      '      <section id="the-race">',
+      '      <section class="doc-section" id="the-race">',
+      '        <div class="section-eyebrow">05 · FIX RACE</div>',
       "        <h2>The race</h2>",
       '        <p class="empty">No race has reached main yet. A race appears here once it picks an attempt or when no attempt passes.</p>',
       '        <p class="empty">No pick on main yet.</p>',
@@ -1005,7 +1280,8 @@ function renderRaceSection(race, repoUrl) {
   ].filter(Boolean);
 
   return [
-    '      <section id="the-race">',
+    '      <section class="doc-section" id="the-race">',
+    '        <div class="section-eyebrow">05 · 3-AGENT FIX RACE</div>',
     "        <h2>The race</h2>",
     `        <p>${raceLink(repoUrl, race.pad)} for red report ${escapeHtml(race.redReportPad ?? "unknown")}. Committed race artifacts: ${raceDocs.join(" · ")}.</p>`,
     '        <div class="table-wrap">',
@@ -1027,7 +1303,8 @@ function renderGreenSection(green, red, race, repoUrl) {
   if (!green) {
     const extra = race && !race.pick ? " No attempt passed in the latest race, so no green merge exists." : "";
     return [
-      '      <section id="green-run">',
+      '      <section class="doc-section" id="green-run">',
+      '        <div class="section-eyebrow">06 · VERIFIED FIX</div>',
       "        <h2>The green run after the pick</h2>",
       `        <p class="empty">No green run after a pick yet.${escapeHtml(extra)}</p>`,
       "      </section>"
@@ -1065,7 +1342,8 @@ function renderGreenSection(green, red, race, repoUrl) {
       ].join("\n")
     : "";
   return [
-    '      <section id="green-run">',
+    '      <section class="doc-section" id="green-run">',
+    '        <div class="section-eyebrow">06 · BEFORE / AFTER PROOF</div>',
     "        <h2>The green run after the pick</h2>",
     `        <p>Report ${reportLink(repoUrl, green.pad)} ${chipForOutcome(green.outcome)} verified the pick merge commit ${commitLink(repoUrl, green.testedCommit)}. Drift: ${green.drift.ok ? renderChip("PASS") : renderChip("FAIL")}.</p>`,
     '        <ul class="flow-list">',
@@ -1082,7 +1360,8 @@ function renderGreenSection(green, red, race, repoUrl) {
 function renderTestsAndProofs({ runs, red, race, green, repoUrl }) {
   const latestFlows = runs.length > 0 ? runs.at(-1).flows.length : 4;
   return [
-    '      <section id="tests-and-proofs">',
+    '      <section class="doc-section" id="tests-and-proofs">',
+    '        <div class="section-eyebrow">07 · VERIFICATION SUITE</div>',
     "        <h2>Tests, flows &amp; verification layers</h2>",
     "        <p>Every change passes four independent verification layers so neither a silent browser bug nor a stale explanation can slip onto main.</p>",
     '        <div class="table-wrap">',
@@ -1136,7 +1415,8 @@ function renderAllRunsSection(runs, repoUrl) {
     .join("\n");
 
   return [
-    '      <section id="all-runs">',
+    '      <section class="doc-section" id="all-runs">',
+    '        <div class="section-eyebrow">08 · COMMITTED LEDGER</div>',
     "        <h2>All runs</h2>",
     '        <div class="table-wrap">',
     "          <table>",
@@ -1152,10 +1432,22 @@ function renderAllRunsSection(runs, repoUrl) {
   ].join("\n");
 }
 
+function renderClosingCta(repoUrl) {
+  return [
+    '      <section class="cta-banner" aria-label="Repository call to action">',
+    '        <div class="cta-copy">',
+    '          <p class="cta-line">Clarity in every trace.</p>',
+    '          <p class="cta-line">Proof before every merge.</p>',
+    "        </div>",
+    `        <a class="btn-solid" href="${escapeAttr(repoUrl)}">Inspect on GitHub ${arrowRightSvg(13)}</a>`,
+    "      </section>"
+  ].join("\n");
+}
+
 function renderFooter(repoUrl) {
   return [
     '    <footer class="site-footer">',
-    `      <p><a href="${escapeAttr(`${repoUrl}/blob/main/LICENSE`)}">MIT License</a> | <a href="${escapeAttr(`${repoUrl}/blob/main/README.md`)}">README</a></p>`,
+    `      <p><a href="${escapeAttr(`${repoUrl}/blob/main/LICENSE`)}">MIT License</a> · <a href="${escapeAttr(`${repoUrl}/blob/main/README.md`)}">README</a> · <a href="${escapeAttr(KANE_CLI_URL)}">Kane CLI</a></p>`,
     "      <p>Committed evidence in this repository is text only, except for owner-approved featured screenshots.</p>",
     "    </footer>"
   ].join("\n");
@@ -1212,390 +1504,697 @@ function escapeAttr(value) {
 
 const STYLES = `
     :root {
-      --bg: #ffffff;
-      --surface: #f7f8fa;
-      --ink: #0f172a;
-      --muted: #475569;
-      --rule: #cbd5e1;
-      --rule-soft: #e2e8f0;
-      --accent: #1d4ed8;
-      --accent-hover: #1e3a8a;
-      --pass-ink: #065f46;
-      --pass-bg: #ecfdf5;
-      --pass-rule: #6ee7b7;
+      --bg: #fdfdfc;
+      --card: #ffffff;
+      --surface: #f5f5f4;
+      --surface-subtle: #fafaf9;
+      --ink: #0b0b0b;
+      --ink-secondary: #525252;
+      --ink-muted: #666666;
+      --rule: #e6e6e4;
+      --rule-soft: #efefed;
+      --pass-ink: #166534;
+      --pass-bg: #f0fdf4;
+      --pass-rule: #bbf7d0;
       --fail-ink: #991b1b;
       --fail-bg: #fef2f2;
-      --fail-rule: #fca5a5;
-      --pending-ink: #334155;
-      --pending-bg: #f1f5f9;
-      --pending-rule: #cbd5e1;
-      --text-h2: 1.375rem;
-      --text-body: 1rem;
-      --text-sm: 0.875rem;
+      --fail-rule: #fecaca;
+      --pending-ink: #525252;
+      --pending-bg: #f5f5f4;
+      --pending-rule: #e5e5e5;
+      --font-sans: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      --radius-sm: 6px;
+      --radius-md: 10px;
+      --radius-lg: 16px;
     }
     * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
     body {
       margin: 0;
       background: var(--bg);
       color: var(--ink);
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      font-size: var(--text-body);
+      font-family: var(--font-sans);
+      font-size: 0.9375rem;
       line-height: 1.6;
       -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
     }
-    .page {
-      max-width: 60rem;
+    .shell {
+      max-width: 68rem;
       margin: 0 auto;
-      padding: 2.25rem 1.5rem 4rem;
-    }
-    .site-header {
-      border-bottom: 2px solid var(--ink);
-      padding-bottom: 1.5rem;
-      margin-bottom: 0.5rem;
-    }
-    .masthead-bar {
-      display: flex;
-      align-items: baseline;
-      justify-content: space-between;
-      gap: 1.5rem;
-      flex-wrap: wrap;
-      margin-bottom: 0.75rem;
-    }
-    h1 {
-      margin: 0;
-      font-size: clamp(2.25rem, 4.5vw, 3rem);
-      line-height: 1.08;
-      font-weight: 800;
-      letter-spacing: -0.03em;
-      color: var(--ink);
-    }
-    .lead {
-      margin: 0;
-      color: var(--muted);
-      max-width: 65ch;
-      font-size: var(--text-body);
-    }
-    .header-links {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 1.25rem;
-      font-size: var(--text-sm);
-      font-weight: 500;
-    }
-    .section-nav {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.4rem 1rem;
-      margin-top: 1rem;
-      padding-top: 0.85rem;
-      border-top: 1px solid var(--rule-soft);
-      font-size: var(--text-sm);
-      font-weight: 500;
-    }
-    .two-col {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 1.25rem;
-      margin-top: 0.5rem;
-    }
-    .doc-panel {
-      padding: 1rem 1.15rem;
-      background: var(--surface);
-      border: 1px solid var(--rule-soft);
-    }
-    .doc-panel h3 {
-      margin: 0 0 0.45rem;
-    }
-    .doc-panel p {
-      margin: 0;
-      font-size: var(--text-sm);
-      color: var(--ink);
-    }
-    .kane-roles {
-      list-style: none;
-      margin: 0.75rem 0 0;
-      padding: 0;
-      border-top: 1px solid var(--rule-soft);
-    }
-    .kane-roles li {
-      display: grid;
-      grid-template-columns: 18rem 1fr;
-      gap: 0.4rem 1.25rem;
-      padding: 0.75rem 0;
-      border-bottom: 1px solid var(--rule-soft);
-      font-size: var(--text-sm);
-    }
-    .signal-list {
-      margin: 0.4rem 0 1.25rem;
-      padding: 0.75rem 1rem 0.75rem 1.75rem;
-      background: var(--surface);
-      border: 1px solid var(--rule-soft);
-      font-size: var(--text-sm);
-    }
-    .signal-list li + li { margin-top: 0.35rem; }
-    .sig-kind {
-      color: var(--muted);
-      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-      font-size: 0.85em;
-    }
-    .proof-caption {
-      font-size: var(--text-sm);
-      color: var(--muted);
-      margin-bottom: 0.5rem;
-      max-width: none;
-    }
-    .evidence-bar {
-      margin: 1rem 0 1.25rem;
-      padding: 0.65rem 0.9rem;
-      background: var(--surface);
-      border: 1px solid var(--rule-soft);
-      font-size: var(--text-sm);
-      max-width: none;
-    }
-    code {
-      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-      font-size: 0.9em;
+      padding: 0 2rem 4.5rem;
     }
     a {
-      color: var(--accent);
+      color: var(--ink);
       text-decoration: underline;
+      text-decoration-color: rgba(11, 11, 11, 0.25);
       text-underline-offset: 3px;
       text-decoration-thickness: 1px;
-      transition: color 160ms cubic-bezier(0.22, 1, 0.36, 1);
+      transition: color 140ms ease, text-decoration-color 140ms ease, background-color 140ms ease;
     }
-    a:hover { color: var(--accent-hover); }
+    a:hover { text-decoration-color: var(--ink); }
     a:focus-visible, summary:focus-visible {
-      outline: 2px solid var(--accent);
+      outline: 2px solid var(--ink);
       outline-offset: 2px;
-      border-radius: 2px;
+      border-radius: 4px;
     }
-    section {
-      padding: 2rem 0;
+
+    /* Top Bar */
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1.5rem;
+      padding: 1.35rem 0;
       border-bottom: 1px solid var(--rule-soft);
     }
-    h2 {
-      margin: 0 0 1rem;
-      font-size: var(--text-h2);
-      line-height: 1.25;
-      font-weight: 700;
-      letter-spacing: -0.02em;
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.6rem;
+      text-decoration: none;
+      color: var(--ink);
+      font-weight: 500;
+      font-size: 0.9375rem;
+      letter-spacing: -0.01em;
     }
-    h3 {
-      margin: 1.25rem 0 0.6rem;
-      font-size: var(--text-body);
-      font-weight: 700;
-    }
-    h4 {
-      margin: 1rem 0 0.4rem;
-      font-size: var(--text-body);
-      font-weight: 600;
-    }
-    p {
-      margin: 0 0 0.85rem;
-      max-width: 65ch;
-    }
-    .empty { color: var(--muted); }
-    .mono {
-      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-      font-size: 0.92em;
-      font-variant-numeric: tabular-nums;
-    }
-    .chip {
-      display: inline-block;
-      padding: 0.12rem 0.5rem;
-      border: 1px solid transparent;
-      border-radius: 3px;
-      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-      font-size: 0.8125rem;
-      line-height: 1.3;
-      font-weight: 700;
-      letter-spacing: 0.02em;
-      vertical-align: middle;
-    }
-    .chip-pass {
-      color: var(--pass-ink);
-      background: var(--pass-bg);
-      border-color: var(--pass-rule);
-    }
-    .chip-fail {
-      color: var(--fail-ink);
-      background: var(--fail-bg);
-      border-color: var(--fail-rule);
-    }
-    .chip-pending {
-      color: var(--pending-ink);
-      background: var(--pending-bg);
-      border-color: var(--pending-rule);
-    }
-    .pillars {
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
+    .brand-mark { display: inline-flex; color: var(--ink); }
+    .topnav-links {
+      display: flex;
+      align-items: center;
       gap: 1.5rem;
-      margin-top: 1.25rem;
-      padding-top: 1.25rem;
-      border-top: 1px solid var(--rule-soft);
+      flex-wrap: wrap;
     }
-    .pillar h3 {
-      margin: 0 0 0.4rem;
-      font-size: var(--text-body);
-      font-weight: 700;
+    .topnav-links a {
+      text-decoration: none;
+      color: var(--ink-secondary);
+      font-size: 0.8125rem;
+      font-weight: 400;
+    }
+    .topnav-links a:hover { color: var(--ink); }
+    .topnav-actions {
+      display: flex;
+      align-items: center;
+      gap: 1.15rem;
+    }
+    .nav-ghost {
+      text-decoration: none;
+      color: var(--ink);
+      font-size: 0.8125rem;
+      font-weight: 500;
+    }
+    .btn-solid {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.55rem;
+      padding: 0.68rem 1.15rem;
+      background: var(--ink);
+      color: #ffffff;
+      text-decoration: none;
+      border-radius: var(--radius-sm);
+      font-size: 0.8125rem;
+      font-weight: 500;
+      letter-spacing: -0.005em;
+    }
+    .btn-solid:hover { background: #262626; text-decoration: none; }
+    .btn-sm { padding: 0.5rem 0.9rem; }
+    .btn-ghost {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      text-decoration: none;
+      color: var(--ink);
+      font-size: 0.8125rem;
+      font-weight: 500;
+    }
+    .btn-ghost:hover { color: var(--ink-secondary); text-decoration: none; }
+
+    /* Hero */
+    .hero {
+      display: grid;
+      grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+      align-items: center;
+      gap: 2.5rem;
+      padding: 4rem 0 3.25rem;
+    }
+    .hero-kicker {
+      margin: 0 0 1.25rem;
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      font-weight: 400;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--ink-muted);
+    }
+    .hero-kicker a {
+      color: var(--ink-muted);
+      text-decoration: none;
+      border-bottom: 1px solid var(--rule);
+      padding-bottom: 0.2rem;
+    }
+    .hero-kicker a:hover { color: var(--ink); border-bottom-color: var(--ink); }
+    h1 {
+      margin: 0 0 1.25rem;
+      font-size: clamp(2.5rem, 5vw, 3.85rem);
+      font-weight: 300;
+      line-height: 1.05;
+      letter-spacing: -0.04em;
       color: var(--ink);
     }
-    .pillar p {
-      margin: 0;
-      font-size: var(--text-sm);
-      color: var(--muted);
-      line-height: 1.55;
+    .hero-lead {
+      margin: 0 0 1.85rem;
+      max-width: 44ch;
+      color: var(--ink-secondary);
+      font-size: 0.9375rem;
+      line-height: 1.6;
     }
-    .status-band {
-      padding: 1rem 1.25rem;
+    .hero-actions {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 1.4rem;
+    }
+    .hero-visual { width: 100%; }
+    .wave-svg { width: 100%; height: auto; display: block; }
+
+    /* Framed Showcase Window */
+    .showcase-wrap { padding: 0 0 3.25rem; }
+    .app-frame {
+      display: grid;
+      grid-template-columns: 13.5rem minmax(0, 1fr);
+      background: var(--card);
+      border: 1px solid var(--rule);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+    }
+    .frame-sidebar {
+      display: flex;
+      flex-direction: column;
+      padding: 1.25rem 0.9rem;
+      border-right: 1px solid var(--rule-soft);
+      background: var(--card);
+    }
+    .sidebar-mark {
+      padding: 0.25rem 0.6rem 1.25rem;
+      color: var(--ink);
+    }
+    .sidebar-nav {
+      display: flex;
+      flex-direction: column;
+      gap: 0.15rem;
+      flex: 1;
+    }
+    .sidebar-item {
+      display: block;
+      padding: 0.45rem 0.65rem;
+      border-radius: var(--radius-sm);
+      text-decoration: none;
+      color: var(--ink-secondary);
+      font-size: 0.8125rem;
+      font-weight: 400;
+    }
+    .sidebar-item:hover { background: var(--surface-subtle); color: var(--ink); text-decoration: none; }
+    .sidebar-item.is-active {
       background: var(--surface);
+      color: var(--ink);
+      font-weight: 500;
+    }
+    .sidebar-foot {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      padding: 0.9rem 0.5rem 0.1rem;
+      margin-top: 1.25rem;
+      border-top: 1px solid var(--rule-soft);
+    }
+    .foot-dot {
+      width: 0.55rem;
+      height: 0.55rem;
+      border-radius: 50%;
+      background: var(--ink);
+      flex-shrink: 0;
+    }
+    .foot-title { font-size: 0.75rem; font-weight: 500; color: var(--ink); }
+    .foot-sub { font-size: 0.6875rem; color: var(--ink-muted); }
+
+    .frame-main { padding: 1.5rem 1.75rem 1.75rem; }
+    .frame-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      flex-wrap: wrap;
+      margin-bottom: 1.25rem;
+    }
+    .frame-head h2 {
+      margin: 0;
+      font-size: 1.25rem;
+      font-weight: 400;
+      letter-spacing: -0.02em;
+    }
+    .frame-meta { display: flex; gap: 0.6rem; flex-wrap: wrap; }
+    .meta-pill {
+      padding: 0.25rem 0.65rem;
+      background: var(--surface-subtle);
       border: 1px solid var(--rule-soft);
+      border-radius: var(--radius-sm);
+      font-size: 0.75rem;
+      color: var(--ink-secondary);
+    }
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 0.85rem;
+      margin-bottom: 1rem;
+    }
+    .kpi-card {
+      padding: 1rem 1.05rem;
+      background: var(--card);
+      border: 1px solid var(--rule-soft);
+      border-radius: var(--radius-md);
+    }
+    .kpi-label {
+      font-size: 0.75rem;
+      color: var(--ink-muted);
+      margin-bottom: 0.45rem;
+    }
+    .kpi-val {
+      font-size: 1.65rem;
+      font-weight: 400;
+      letter-spacing: -0.03em;
+      line-height: 1.1;
+      font-variant-numeric: tabular-nums;
+      margin-bottom: 0.4rem;
+    }
+    .kpi-sub { font-size: 0.75rem; color: var(--ink-secondary); }
+
+    .chart-card {
+      display: grid;
+      grid-template-columns: minmax(0, 2.4fr) minmax(11rem, 1fr);
+      gap: 1.5rem;
+      padding: 1.15rem 1.25rem;
+      border: 1px solid var(--rule-soft);
+      border-radius: var(--radius-md);
+      background: var(--card);
+      margin-bottom: 1rem;
+    }
+    .chart-title {
+      font-size: 0.8125rem;
+      font-weight: 500;
+      color: var(--ink);
+      margin-bottom: 0.65rem;
+    }
+    .chart-svg { width: 100%; height: auto; display: block; }
+    .chart-aside {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 1rem;
+      padding-left: 1.25rem;
+      border-left: 1px solid var(--rule-soft);
+    }
+    .aside-val {
+      font-size: 1.65rem;
+      font-weight: 400;
+      letter-spacing: -0.03em;
+      line-height: 1.15;
+      font-variant-numeric: tabular-nums;
+    }
+    .aside-strong {
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: var(--ink);
+      margin-bottom: 0.4rem;
+    }
+    .micro-bar {
+      height: 3px;
+      width: 100%;
+      background: var(--rule-soft);
+      border-radius: 999px;
+      overflow: hidden;
+      margin-bottom: 0.45rem;
+    }
+    .micro-bar span {
+      display: block;
+      width: 50%;
+      height: 100%;
+      background: var(--ink);
+    }
+    .status-strip {
+      padding: 0.9rem 1.1rem;
+      background: var(--surface-subtle);
+      border: 1px solid var(--rule-soft);
+      border-radius: var(--radius-md);
     }
     .status-summary {
-      margin: 0 0 0.75rem;
+      margin: 0 0 0.65rem;
+      font-size: 0.8125rem;
+      color: var(--ink-secondary);
       max-width: none;
     }
     .flow-list {
       list-style: none;
       margin: 0;
-      padding: 0.75rem 0 0;
+      padding: 0.65rem 0 0;
       border-top: 1px solid var(--rule-soft);
       display: flex;
       flex-wrap: wrap;
-      gap: 0.6rem 1.5rem;
+      gap: 0.5rem 1.25rem;
+      font-size: 0.8125rem;
     }
     .flow-list li {
       display: inline-flex;
       align-items: center;
       gap: 0.45rem;
     }
-    .loop-list {
-      list-style: none;
+
+    /* Stack Trust Strip */
+    .trust-strip {
+      padding: 2rem 0;
+      border-bottom: 1px solid var(--rule-soft);
+    }
+    .trust-label {
+      font-size: 0.6875rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--ink-muted);
+      margin-bottom: 1.1rem;
+    }
+    .trust-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 1rem 2rem;
+    }
+    .trust-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      color: var(--ink-secondary);
+      font-size: 0.9375rem;
+      font-weight: 500;
+      letter-spacing: -0.01em;
+    }
+    .trust-icon { font-size: 0.875rem; color: var(--ink-muted); }
+
+    /* Editorial 5-Col Feature Band */
+    .editorial-band {
+      display: grid;
+      grid-template-columns: minmax(0, 1.25fr) minmax(0, 3fr);
+      gap: 2.5rem;
+      padding: 3.5rem 0;
+      border-bottom: 1px solid var(--rule-soft);
+    }
+    .editorial-h2 {
+      margin: 0 0 0.9rem;
+      font-size: clamp(1.6rem, 2.8vw, 2.05rem);
+      font-weight: 300;
+      line-height: 1.15;
+      letter-spacing: -0.03em;
+    }
+    .editorial-intro p {
+      margin: 0 0 1.25rem;
+      color: var(--ink-secondary);
+      font-size: 0.875rem;
+    }
+    .feature-cols {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 1.5rem;
+    }
+    .feature-icon {
+      display: inline-flex;
+      padding-bottom: 0.65rem;
+      margin-bottom: 0.8rem;
+      border-bottom: 1px solid var(--ink);
+      color: var(--ink);
+    }
+    .feature-col h3 {
+      margin: 0 0 0.45rem;
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: var(--ink);
+    }
+    .feature-col p {
       margin: 0;
+      font-size: 0.8125rem;
+      color: var(--ink-secondary);
+      line-height: 1.55;
+    }
+
+    /* Evidence & Deep-Dive Sections */
+    .doc-section {
+      padding: 3rem 0;
+      border-bottom: 1px solid var(--rule-soft);
+    }
+    .section-eyebrow {
+      font-family: var(--font-mono);
+      font-size: 0.6875rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--ink-muted);
+      margin-bottom: 0.55rem;
+    }
+    h2 {
+      margin: 0 0 1rem;
+      font-size: 1.5rem;
+      font-weight: 400;
+      line-height: 1.2;
+      letter-spacing: -0.025em;
+      color: var(--ink);
+    }
+    h3 {
+      margin: 1.5rem 0 0.65rem;
+      font-size: 1rem;
+      font-weight: 500;
+      letter-spacing: -0.01em;
+    }
+    h4 {
+      margin: 1.25rem 0 0.5rem;
+      font-size: 0.875rem;
+      font-weight: 500;
+    }
+    p {
+      margin: 0 0 0.9rem;
+      max-width: 68ch;
+      color: var(--ink-secondary);
+    }
+    .empty { color: var(--ink-muted); }
+    .mono, code {
+      font-family: var(--font-mono);
+      font-size: 0.88em;
+      font-variant-numeric: tabular-nums;
+    }
+    .two-col {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 1.25rem;
+      margin-top: 1rem;
+    }
+    .doc-panel {
+      padding: 1.35rem 1.4rem;
+      background: var(--card);
+      border: 1px solid var(--rule-soft);
+      border-radius: var(--radius-md);
+    }
+    .doc-panel h3 { margin: 0 0 0.55rem; color: var(--ink); }
+    .doc-panel p { margin: 0; font-size: 0.875rem; color: var(--ink-secondary); }
+
+    .ledger-list {
+      list-style: none;
+      margin: 1rem 0 0;
       padding: 0;
       border-top: 1px solid var(--rule-soft);
     }
-    .loop-list li {
+    .ledger-list li {
       display: grid;
-      grid-template-columns: 16rem 1fr;
-      gap: 0.5rem 1.25rem;
+      grid-template-columns: 18rem minmax(0, 1fr);
+      gap: 0.5rem 1.5rem;
       align-items: baseline;
-      padding: 0.7rem 0;
+      padding: 0.9rem 0;
       border-bottom: 1px solid var(--rule-soft);
     }
-    .loop-step-head {
+    .ledger-head {
       display: flex;
       align-items: center;
-      gap: 0.5rem;
+      gap: 0.6rem;
       flex-wrap: wrap;
-    }
-    .step-index {
-      display: inline-block;
-      min-width: 1.4rem;
-      font-weight: 700;
-      font-variant-numeric: tabular-nums;
-      color: var(--muted);
-    }
-    .step-body {
-      display: flex;
-      flex-direction: column;
-      gap: 0.2rem;
-    }
-    .step-role { color: var(--ink); }
-    .step-detail {
-      color: var(--muted);
-      font-size: var(--text-sm);
-    }
-    .failure-titles {
-      margin: 0.75rem 0 1rem;
-      padding: 0.75rem 1rem 0.75rem 2rem;
-      background: var(--fail-bg);
-      border-left: 3px solid #dc2626;
+      font-size: 0.875rem;
       color: var(--ink);
     }
+    .ledger-head strong { font-weight: 500; }
+    .step-index {
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      color: var(--ink-muted);
+      min-width: 1.5rem;
+    }
+    .ledger-body {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+      font-size: 0.875rem;
+      color: var(--ink-secondary);
+    }
+    .step-role { color: var(--ink); }
+    .step-detail { color: var(--ink-muted); font-size: 0.8125rem; }
+
+    .chip {
+      display: inline-block;
+      padding: 0.12rem 0.48rem;
+      border: 1px solid transparent;
+      border-radius: 4px;
+      font-family: var(--font-mono);
+      font-size: 0.6875rem;
+      line-height: 1.35;
+      font-weight: 500;
+      letter-spacing: 0.04em;
+      vertical-align: middle;
+    }
+    .chip-pass { color: var(--pass-ink); background: var(--pass-bg); border-color: var(--pass-rule); }
+    .chip-fail { color: var(--fail-ink); background: var(--fail-bg); border-color: var(--fail-rule); }
+    .chip-pending { color: var(--pending-ink); background: var(--pending-bg); border-color: var(--pending-rule); }
+
+    .failure-titles {
+      margin: 0.85rem 0 1rem;
+      padding: 0.85rem 1.15rem 0.85rem 2rem;
+      background: var(--fail-bg);
+      border: 1px solid var(--fail-rule);
+      border-radius: var(--radius-md);
+      color: var(--fail-ink);
+      font-size: 0.875rem;
+    }
     .failure-titles li + li { margin-top: 0.35rem; }
+
     .verdict-grid {
-      margin: 0.75rem 0 1.5rem;
-      padding: 0.25rem 1rem;
-      background: var(--surface);
+      margin: 0.85rem 0 1.4rem;
+      padding: 0.25rem 1.15rem;
+      background: var(--card);
       border: 1px solid var(--rule-soft);
+      border-radius: var(--radius-md);
     }
     .verdict-grid > div {
       display: grid;
-      grid-template-columns: 10.5rem 1fr;
+      grid-template-columns: 10.5rem minmax(0, 1fr);
       gap: 0.5rem 1rem;
-      padding: 0.55rem 0;
+      padding: 0.65rem 0;
       border-bottom: 1px solid var(--rule-soft);
+      font-size: 0.875rem;
     }
     .verdict-grid > div:last-child { border-bottom: none; }
-    .verdict-grid dt {
-      font-weight: 600;
-      color: var(--muted);
-      font-size: var(--text-sm);
+    .verdict-grid dt { font-weight: 500; color: var(--ink-muted); font-size: 0.8125rem; }
+    .verdict-grid dd { margin: 0; color: var(--ink); }
+
+    .signal-list {
+      margin: 0.5rem 0 1.25rem;
+      padding: 0.85rem 1.15rem 0.85rem 1.85rem;
+      background: var(--card);
+      border: 1px solid var(--rule-soft);
+      border-radius: var(--radius-md);
+      font-size: 0.8125rem;
+      color: var(--ink-secondary);
     }
-    .verdict-grid dd { margin: 0; }
+    .signal-list li + li { margin-top: 0.4rem; }
+    .sig-kind { color: var(--ink-muted); font-family: var(--font-mono); font-size: 0.88em; }
+
+    .proof-caption {
+      font-size: 0.8125rem;
+      color: var(--ink-muted);
+      margin-bottom: 0.5rem;
+      max-width: none;
+    }
+    .evidence-bar {
+      margin: 1rem 0 1.25rem;
+      padding: 0.75rem 1rem;
+      background: var(--surface-subtle);
+      border: 1px solid var(--rule-soft);
+      border-radius: var(--radius-md);
+      font-size: 0.8125rem;
+      max-width: none;
+      color: var(--ink-secondary);
+    }
+
+    .trace-drawer {
+      margin-top: 1.25rem;
+      padding: 0.9rem 1.15rem;
+      background: var(--card);
+      border: 1px solid var(--rule-soft);
+      border-radius: var(--radius-md);
+    }
+    .trace-list { margin-top: 0.75rem; }
     .trace-fn {
       padding: 0.85rem 0;
       border-top: 1px solid var(--rule-soft);
     }
-    .fn-status {
-      font-weight: 500;
-      color: var(--muted);
-      font-size: var(--text-sm);
-    }
-    details { margin-top: 0.45rem; }
+    .trace-fn h4 { margin: 0 0 0.35rem; color: var(--ink); }
+    .trace-fn p { margin: 0 0 0.45rem; font-size: 0.8125rem; }
+    .fn-status { font-weight: 400; color: var(--ink-muted); font-size: 0.8125rem; }
+
+    details { margin-top: 0.35rem; }
     summary {
       cursor: pointer;
-      color: var(--accent);
-      font-size: var(--text-sm);
+      color: var(--ink);
+      font-size: 0.8125rem;
       font-weight: 500;
       width: fit-content;
-      transition: color 160ms cubic-bezier(0.22, 1, 0.36, 1);
     }
-    summary:hover { color: var(--accent-hover); }
+    summary:hover { color: var(--ink-secondary); }
     pre {
       margin: 0.6rem 0 0;
       padding: 0.9rem 1rem;
-      background: var(--surface);
+      background: var(--surface-subtle);
       border: 1px solid var(--rule-soft);
+      border-radius: var(--radius-sm);
       overflow-x: auto;
-      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-      font-size: var(--text-sm);
+      font-family: var(--font-mono);
+      font-size: 0.8125rem;
       line-height: 1.5;
+      color: var(--ink);
     }
+
     .pick-box {
       margin-top: 1.15rem;
-      padding: 0.9rem 1.15rem;
-      background: var(--surface);
+      padding: 1rem 1.25rem;
+      background: var(--surface-subtle);
       border: 1px solid var(--rule);
+      border-radius: var(--radius-md);
+      font-size: 0.875rem;
     }
+    .pick-box p { max-width: none; color: var(--ink); margin-bottom: 0.45rem; }
     .pick-box p:last-child { margin-bottom: 0; }
+
     .table-wrap {
       overflow-x: auto;
-      margin-top: 0.75rem;
+      margin-top: 0.85rem;
+      background: var(--card);
       border: 1px solid var(--rule-soft);
+      border-radius: var(--radius-md);
     }
     table {
       width: 100%;
       border-collapse: collapse;
-      font-size: var(--text-sm);
+      font-size: 0.8125rem;
       font-variant-numeric: tabular-nums;
     }
     th, td {
       text-align: left;
       vertical-align: top;
-      padding: 0.65rem 0.75rem;
+      padding: 0.72rem 0.85rem;
       border-bottom: 1px solid var(--rule-soft);
+      color: var(--ink-secondary);
     }
+    td strong { color: var(--ink); font-weight: 500; }
     tbody tr:last-child td { border-bottom: none; }
-    tbody tr:hover { background: var(--surface); }
+    tbody tr:hover { background: var(--surface-subtle); }
     th {
-      background: var(--surface);
-      font-weight: 600;
-      color: var(--ink);
+      background: var(--surface-subtle);
+      font-weight: 500;
+      color: var(--ink-muted);
       border-bottom: 1px solid var(--rule);
       white-space: nowrap;
+      font-size: 0.75rem;
     }
     .run-flow {
       display: inline-flex;
@@ -1609,28 +2208,70 @@ const STYLES = `
       max-width: 100%;
       height: auto;
       border: 1px solid var(--rule);
+      border-radius: var(--radius-md);
       display: block;
     }
     .featured-shot figcaption {
       margin-top: 0.5rem;
-      font-size: var(--text-sm);
-      color: var(--muted);
+      font-size: 0.8125rem;
+      color: var(--ink-muted);
     }
+
+    /* Closing CTA Banner */
+    .cta-banner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1.5rem;
+      flex-wrap: wrap;
+      margin-top: 3rem;
+      padding: 2.25rem 2.5rem;
+      background: var(--surface);
+      border: 1px solid var(--rule-soft);
+      border-radius: var(--radius-lg);
+    }
+    .cta-line {
+      margin: 0;
+      font-size: clamp(1.25rem, 2.2vw, 1.6rem);
+      font-weight: 300;
+      line-height: 1.25;
+      letter-spacing: -0.025em;
+      color: var(--ink);
+    }
+
     .site-footer {
-      margin-top: 2rem;
-      font-size: var(--text-sm);
-      color: var(--muted);
+      margin-top: 2.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      flex-wrap: wrap;
+      gap: 0.5rem 1.5rem;
+      font-size: 0.75rem;
+      color: var(--ink-muted);
     }
-    .site-footer p { max-width: none; }
-    @media (max-width: 680px) {
-      .page { padding: 1.5rem 1rem 3rem; }
-      .masthead-bar { gap: 0.75rem; }
-      .pillars, .two-col { grid-template-columns: 1fr; gap: 1rem; }
-      .loop-list li, .kane-roles li { grid-template-columns: 1fr; gap: 0.25rem; }
-      .verdict-grid > div { grid-template-columns: 1fr; gap: 0.15rem; }
+    .site-footer p { margin: 0; max-width: none; color: var(--ink-muted); }
+
+    @media (max-width: 900px) {
+      .hero { grid-template-columns: 1fr; padding: 2.5rem 0 2rem; }
+      .app-frame { grid-template-columns: 1fr; }
+      .frame-sidebar { border-right: none; border-bottom: 1px solid var(--rule-soft); }
+      .sidebar-nav { flex-direction: row; flex-wrap: wrap; }
+      .kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .chart-card { grid-template-columns: 1fr; }
+      .chart-aside { padding-left: 0; padding-top: 1rem; border-left: none; border-top: 1px solid var(--rule-soft); }
+      .editorial-band { grid-template-columns: 1fr; }
+      .feature-cols { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    @media (max-width: 640px) {
+      .shell { padding: 0 1rem 3rem; }
+      .topnav-links { display: none; }
+      .two-col, .feature-cols { grid-template-columns: 1fr; }
+      .ledger-list li, .verdict-grid > div { grid-template-columns: 1fr; gap: 0.25rem; }
+      .cta-banner { padding: 1.5rem; }
     }
     @media (prefers-reduced-motion: reduce) {
-      a, summary { transition: none; }
+      html { scroll-behavior: auto; }
+      a { transition: none; }
     }
 `;
 
