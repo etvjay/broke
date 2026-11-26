@@ -6,6 +6,7 @@ export const QUESTION_MAX = 200;
 export const OPTION_MAX = 100;
 export const OPTIONS_MIN = 2;
 export const OPTIONS_MAX = 10;
+const SUBMISSION_ID = /^[A-Za-z0-9_-]{8,100}$/;
 
 export async function loadPolls(file) {
   let text;
@@ -35,8 +36,18 @@ export function createPoll(polls, input) {
     ballots: {},
     createdAt: new Date().toISOString()
   };
+  const submissionId = cleanSubmissionId(input?.submissionId);
+  if (submissionId !== null) poll.submissionId = submissionId;
   polls.push(poll);
   return poll;
+}
+
+export function findSubmission(polls, submissionId) {
+  if (typeof submissionId !== "string") return null;
+  for (const poll of polls) {
+    if (poll.submissionId === submissionId) return poll;
+  }
+  return null;
 }
 
 export function castVote(polls, pollId, optionIndex, voterId) {
@@ -81,6 +92,14 @@ function cleanText(value, label, max) {
   if (text.length === 0) throw invalid(`${label} is required`);
   if (text.length > max) throw invalid(`${label} must be ${max} characters or fewer`);
   return text;
+}
+
+function cleanSubmissionId(value) {
+  if (value === undefined || value === null) return null;
+  if (typeof value !== "string" || !SUBMISSION_ID.test(value)) {
+    throw invalid("submissionId must be 8 to 100 letters, digits, dashes, or underscores");
+  }
+  return value;
 }
 
 function cleanOptions(value) {

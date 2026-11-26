@@ -1,0 +1,10 @@
+{
+  "kind": "wait",
+  "status": "passed",
+  "summary": "wait: PRIMARY: wait until the poll list has updated",
+  "duration_ms": 6235.4,
+  "url": "http://localhost:40361/",
+  "action_id": "0c1ee84e-2920-4d2e-b7b0-9f30651ce8df",
+  "ordinal": 8,
+  "id": "0-8"
+}

@@ -1,0 +1,16 @@
+{
+  "kind": "type",
+  "status": "passed",
+  "summary": "type: Entering Lunch spot? into the poll question field",
+  "duration_ms": 4928.1,
+  "url": "http://localhost:40767/",
+  "action_id": "2f48fcfb-ade7-4cd5-a282-7542c891c912",
+  "element_rect": {
+    "x": 667,
+    "y": 137,
+    "width": 586,
+    "height": 19
+  },
+  "ordinal": 3,
+  "id": "0-3"
+}

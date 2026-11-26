@@ -1,0 +1,16 @@
+{
+  "kind": "type",
+  "status": "passed",
+  "summary": "type: Type \"Lunch spot?\" into \"Question\"",
+  "duration_ms": 159.1,
+  "url": "http://localhost:43187/",
+  "action_id": "e418a0cb-8e95-4cdc-9330-6ed3bb128cce",
+  "element_rect": {
+    "x": 667,
+    "y": 137,
+    "width": 586,
+    "height": 19
+  },
+  "ordinal": 3,
+  "id": "0-3"
+}

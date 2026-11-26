@@ -1,0 +1,10 @@
+{
+  "kind": "analyze",
+  "status": "passed",
+  "summary": "analyze: ANALYZE(visual, 'The poll list contains exactly one poll with the question \"Doub",
+  "duration_ms": 17560.1,
+  "url": "http://localhost:42895/",
+  "action_id": "58ce0caf-5ac9-4207-be9f-3f52a4ef842e",
+  "ordinal": 8,
+  "id": "0-8"
+}

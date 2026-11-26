@@ -1,0 +1,16 @@
+{
+  "kind": "click",
+  "status": "passed",
+  "summary": "click: Clicking the Vote button next to Green",
+  "duration_ms": 6055.6,
+  "url": "http://localhost:44581/",
+  "action_id": "f8243ffb-efd0-4786-95f7-4e00fd3c6f37",
+  "element_rect": {
+    "x": 1212,
+    "y": 477,
+    "width": 35,
+    "height": 19
+  },
+  "ordinal": 10,
+  "id": "0-10"
+}

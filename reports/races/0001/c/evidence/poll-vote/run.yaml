@@ -1,0 +1,33 @@
+evidence: '0.1'
+run_id: a38f26a8-37e5-43aa-967e-07d18502e378
+status: finalized
+title: |
+  Open the start page of the poll app.
+  Create a poll: in the Question box, type Favourite colour?, and in the Options box, type Red on one line and Blue on the next line. Then click Create poll.
+  Check that the poll "Favourite colour?" appears in the list with "Blue (0)".
+  Click the Vote button next to Blue.
+  Check that the message "Vote counted." appears under that poll.
+  Check that the poll now shows "Blue (1)".
+started: 2026-11-26T12:36:03.025Z
+environment:
+  producer:
+    name: kane-cli
+    version: 0.10.4
+  surfaces:
+    - http://localhost:44775
+  run_kind: author
+  origin: inline
+  pid: 230428
+  saved: false
+metrics_catalog:
+  id: kane-cli
+  version: 1
+  sha256: 9774e11a8a2240448d765bd4ad8eb1cf6c0444937e72050588b597539c890e77
+  source: bundled
+ended: 2026-11-26T12:37:24.329Z
+totals:
+  tests: 1
+  passed: 1
+  failed: 0
+  broken: 0
+  skipped: 0

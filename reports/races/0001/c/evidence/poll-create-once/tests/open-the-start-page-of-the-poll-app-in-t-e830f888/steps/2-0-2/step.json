@@ -1,0 +1,16 @@
+{
+  "kind": "type",
+  "status": "passed",
+  "summary": "type: Typing in the Question box",
+  "duration_ms": 7101.4,
+  "url": "http://localhost:33821/",
+  "action_id": "ae56b5d0-e8c7-4171-9da9-ec8d876b809e",
+  "element_rect": {
+    "x": 667,
+    "y": 137,
+    "width": 586,
+    "height": 19
+  },
+  "ordinal": 2,
+  "id": "0-2"
+}

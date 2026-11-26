@@ -1,0 +1,10 @@
+{
+  "kind": "wait",
+  "status": "passed",
+  "summary": "wait: queued plan (3 steps): type \"Question\"; type \"Options, one per line\"; click \"Cre",
+  "duration_ms": 4930.0,
+  "url": "http://localhost:39625/",
+  "action_id": "6a2cd46e-89e1-4e50-865a-c11f9b9ae525",
+  "ordinal": 3,
+  "id": "0-3"
+}

@@ -1,0 +1,68 @@
+evidence: '0.1'
+test: open-the-start-page-of-the-poll-app-in-t-e830f888
+status: passed
+duration_ms: 61341
+external_id:
+  session_id: 3de6df95-7ec6-454c-9cfc-e5cb9a1ba02d
+  commit_id: 3de6df95-7ec6-454c-9cfc-e5cb9a1ba02d
+  test_id: 9cae6dcf-e90b-481e-a81b-6bafe18362bc
+  testcase_id: 01M8BXVMAM1SWR5XVB9FKNXRFB
+  project_id: 01M0HVQ571X8ARVW8V01B9FXH5
+  folder_id: 01M0J0NKJF28RDJD0J364SHW7G
+  org_id: '<account-id>'
+  user_name: <account>
+  user_email: <email>
+  sharable_link: https://test-manager.lambdatest.com/projects/01M0HVQ571X8ARVW8V01B9FXH5/test-cases/01M8BXVMAM1SWR5XVB9FKNXRFB/dashboard/share/<share-token>?type=summary&agentView=true&fqdn=summary-page
+  execution_id: 3930d045-8653-4e23-b91b-4a4374621280
+environment:
+  model: v16-alpha
+  os: Linux
+  browser: Chrome
+  browser_version: '157'
+  resolution: 1920x1080
+  platform: Desktop
+  platform_type: web
+  os_version: 7.0.0-1011-aws
+steps:
+  - id: 0-1
+    ordinal: 1
+    status: passed
+    kind: navigate
+    duration_ms: 0
+    action_id: 83cc6aaa-590e-43de-85f7-cc03e2238532
+  - id: 0-2
+    ordinal: 2
+    status: passed
+    kind: type
+    duration_ms: 7100
+    action_id: ae56b5d0-e8c7-4171-9da9-ec8d876b809e
+  - id: 0-3
+    ordinal: 3
+    status: passed
+    kind: type
+    duration_ms: 5200
+    action_id: 20d6a214-e2b7-44b0-a4e0-4532bfbab134
+  - id: 0-4
+    ordinal: 4
+    status: passed
+    kind: click
+    duration_ms: 6000
+    action_id: 59c3a211-8332-44de-ba39-045f10403fb1
+  - id: 0-5
+    ordinal: 5
+    status: passed
+    kind: wait
+    duration_ms: 6400
+    action_id: e10ea19c-fbd5-49ec-9c75-070b5b6b45bf
+  - id: 0-6
+    ordinal: 6
+    status: passed
+    kind: analyze
+    duration_ms: 17800
+    action_id: 8ef2a95f-8b13-42d4-898d-eb296cddd880
+  - id: 0-7
+    ordinal: 7
+    status: passed
+    kind: assert
+    duration_ms: 0
+    action_id: f7f52411-de92-40a6-a5dd-0686b238a4e6

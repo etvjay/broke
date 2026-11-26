@@ -1,0 +1,16 @@
+{
+  "kind": "type",
+  "status": "passed",
+  "summary": "type: Entering options Red and Blue in the textbox",
+  "duration_ms": 5648.2,
+  "url": "http://localhost:39625/",
+  "action_id": "86feb662-93d6-469a-8834-a0c17ce9cb84",
+  "element_rect": {
+    "x": 666,
+    "y": 206,
+    "width": 588,
+    "height": 57
+  },
+  "ordinal": 6,
+  "id": "0-6"
+}

@@ -1,0 +1,16 @@
+{
+  "kind": "type",
+  "status": "passed",
+  "summary": "type: Type \"Yes\" into \"Options, one per line\"",
+  "duration_ms": 109.1,
+  "url": "http://localhost:36217/",
+  "action_id": "f2cca135-807e-4d5d-8319-5db3e34dd7e4",
+  "element_rect": {
+    "x": 666,
+    "y": 206,
+    "width": 588,
+    "height": 57
+  },
+  "ordinal": 11,
+  "id": "1-3"
+}

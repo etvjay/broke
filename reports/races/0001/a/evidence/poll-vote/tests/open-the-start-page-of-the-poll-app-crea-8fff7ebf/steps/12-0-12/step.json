@@ -1,0 +1,10 @@
+{
+  "kind": "assert",
+  "status": "passed",
+  "summary": "assert: the message \"Vote counted.\" appears under that poll",
+  "duration_ms": 5.8,
+  "url": "http://localhost:39625/",
+  "action_id": "b849322e-c1a8-49aa-8840-ca830a3ef85c",
+  "ordinal": 12,
+  "id": "0-12"
+}

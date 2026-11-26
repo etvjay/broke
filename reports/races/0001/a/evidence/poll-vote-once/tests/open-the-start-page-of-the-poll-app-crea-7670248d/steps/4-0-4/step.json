@@ -1,0 +1,16 @@
+{
+  "kind": "type",
+  "status": "passed",
+  "summary": "type: Type \"Best tea?\" into \"Question\"",
+  "duration_ms": 141.1,
+  "url": "http://localhost:44581/",
+  "action_id": "30cca67c-fd0c-447c-8df7-07f1cf4a6557",
+  "element_rect": {
+    "x": 667,
+    "y": 137,
+    "width": 586,
+    "height": 19
+  },
+  "ordinal": 4,
+  "id": "0-4"
+}

@@ -1,0 +1,16 @@
+{
+  "kind": "analyze",
+  "status": "passed",
+  "summary": "analyze: the poll shows the option \"Tacos (0)\"",
+  "duration_ms": 9933.3,
+  "url": "http://localhost:36217/",
+  "action_id": "2b7821c5-ebaa-4e07-af1a-20a410b475c2",
+  "analyze_action_ids": [
+    "85bd2b49-6cd7-4c78-ab00-73ff6fdf4608",
+    "e6427904-f365-42f0-8845-4170f3e70d25",
+    "7d89e47a-c763-41ef-b0a8-b7f1f53c94d6",
+    "2b7821c5-ebaa-4e07-af1a-20a410b475c2"
+  ],
+  "ordinal": 5,
+  "id": "0-5"
+}

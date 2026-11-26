@@ -1,0 +1,16 @@
+{
+  "kind": "type",
+  "status": "passed",
+  "summary": "type: Typing Green then Black into the Options box on separate lines",
+  "duration_ms": 5503.6,
+  "url": "http://localhost:44795/",
+  "action_id": "680699a2-8d20-4690-8252-433da1694278",
+  "element_rect": {
+    "x": 666,
+    "y": 206,
+    "width": 588,
+    "height": 57
+  },
+  "ordinal": 3,
+  "id": "0-3"
+}

@@ -2,14 +2,14 @@
   {
     "file": "app/server.mjs",
     "name": "addPollRoute",
-    "explanation": "Reads the new poll from the request body and saves it. It answers 201 with the poll, or 400 with the validation message when the input is not usable.",
-    "hash": "a24f0d40bb379d836fb37c9e700d8659b560dfabe0b094beb7a97d966cf3f485"
+    "explanation": "Reads the new poll from the request body and saves it. It answers 201 with a new poll, 200 with the earlier poll when the same submission was already saved, or 400 with the validation message when the input is not usable.",
+    "hash": "13c2c0d44c7318ca656474bac20bf47ef14d6c460b7181dc54a43fbfb954c664"
   },
   {
     "file": "app/server.mjs",
     "name": "addPollTask",
-    "explanation": "Loads the poll list, adds the new poll, saves the list, and returns the new poll. It runs inside the write queue.",
-    "hash": "44756f7b2d11984dfa7ab9cf78ef112f0cd0d5020d895ba4190073fdb880e31c"
+    "explanation": "Loads the poll list and, when a poll with the same submission id already exists, returns that poll as not created. Otherwise it adds the new poll, saves the list, and returns it as created; it runs inside the write queue, so two sends of one form cannot both create a poll.",
+    "hash": "dccae47130233a66471c6b335ac07f752aaa9488de8a4820b3618dedfaed5292"
   },
   {
     "file": "app/server.mjs",
@@ -169,6 +169,12 @@
   },
   {
     "file": "app/store.mjs",
+    "name": "cleanSubmissionId",
+    "explanation": "Returns null when no submission id is given, or the id itself when it is 8 to 100 letters, digits, dashes, or underscores. Any other value is a validation error.",
+    "hash": "2acd8d3ad2c2aeba9ffbe755b675b2fd0a67af00259b11b6a3e3e2833347fc01"
+  },
+  {
+    "file": "app/store.mjs",
     "name": "cleanText",
     "explanation": "Trims a text value and rejects it when it is missing, empty, not text, or longer than the limit.",
     "hash": "e04fd4d7ff08d468d5e54d52c446ea968e30a7776837f78949a4c61f77d68ae1"
@@ -182,14 +188,20 @@
   {
     "file": "app/store.mjs",
     "name": "createPoll",
-    "explanation": "Checks the question and options, adds a new poll with zero votes and an empty ballot map to the list, and returns it. It throws a validation error when the input is not usable.",
-    "hash": "88806b7d7a0549df9155037d23ce82794dbd7f8fbe15158f3dc1fa6a68530d84"
+    "explanation": "Checks the question, options, and optional submission id, adds a new poll with zero votes and an empty ballot map to the list, and returns it. It throws a validation error when the input is not usable; the submission id is kept on the stored poll so a repeat send of the same form can be found.",
+    "hash": "9468e0904db8886b2b57ecbd8dbbf7af197f3f61e3b8609a5f8f23d9bfbd0427"
   },
   {
     "file": "app/store.mjs",
     "name": "findPoll",
     "explanation": "Returns the poll with the given id from the list, or null when no poll has that id.",
     "hash": "5c42388d4f7642ebe6e96d9ef22ea8eedfa2d0ef8c6df0aad264e6169353bd83"
+  },
+  {
+    "file": "app/store.mjs",
+    "name": "findSubmission",
+    "explanation": "Returns the poll that was created with the given submission id, or null when the id is not text or no poll has it.",
+    "hash": "8e63a0a72715448f9d08a8f7010dabf55ab38d7c69c593f3f084a97dc6d2cb3f"
   },
   {
     "file": "app/store.mjs",

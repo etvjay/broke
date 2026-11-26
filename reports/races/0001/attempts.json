@@ -1,0 +1,130 @@
+{
+  "number": 1,
+  "base": "cc22ab7da135c1c611e591c2ce6877051cd80c8d",
+  "tested": "b35d27f0df9c266bd3743aa38f6bf572436950e3",
+  "attempts": [
+    {
+      "letter": "a",
+      "branch": "race/0001-a",
+      "commit": "f74aeba",
+      "status": "green",
+      "reason": "every flow passed and drift passed.",
+      "files": 4,
+      "insertions": 63,
+      "deletions": 13,
+      "explanationsChanged": 5,
+      "flows": [
+        {
+          "name": "poll-create.md",
+          "outcome": "pass",
+          "reason": "passed",
+          "verdict": null
+        },
+        {
+          "name": "poll-vote.md",
+          "outcome": "pass",
+          "reason": "passed",
+          "verdict": null
+        },
+        {
+          "name": "poll-vote-once.md",
+          "outcome": "pass",
+          "reason": "passed",
+          "verdict": null
+        },
+        {
+          "name": "poll-create-once.md",
+          "outcome": "pass",
+          "reason": "passed",
+          "verdict": null
+        }
+      ],
+      "drift": {
+        "ok": true,
+        "problems": 0
+      }
+    },
+    {
+      "letter": "b",
+      "branch": "race/0001-b",
+      "commit": "51be746",
+      "status": "green",
+      "reason": "every flow passed and drift passed.",
+      "files": 4,
+      "insertions": 43,
+      "deletions": 3,
+      "explanationsChanged": 2,
+      "flows": [
+        {
+          "name": "poll-create.md",
+          "outcome": "pass",
+          "reason": "passed",
+          "verdict": null
+        },
+        {
+          "name": "poll-vote.md",
+          "outcome": "pass",
+          "reason": "passed",
+          "verdict": null
+        },
+        {
+          "name": "poll-vote-once.md",
+          "outcome": "pass",
+          "reason": "passed",
+          "verdict": null
+        },
+        {
+          "name": "poll-create-once.md",
+          "outcome": "pass",
+          "reason": "passed",
+          "verdict": null
+        }
+      ],
+      "drift": {
+        "ok": true,
+        "problems": 0
+      }
+    },
+    {
+      "letter": "c",
+      "branch": "race/0001-c",
+      "commit": "107051a",
+      "status": "green",
+      "reason": "every flow passed and drift passed.",
+      "files": 4,
+      "insertions": 58,
+      "deletions": 17,
+      "explanationsChanged": 5,
+      "flows": [
+        {
+          "name": "poll-create.md",
+          "outcome": "pass",
+          "reason": "passed",
+          "verdict": null
+        },
+        {
+          "name": "poll-vote.md",
+          "outcome": "pass",
+          "reason": "passed",
+          "verdict": null
+        },
+        {
+          "name": "poll-vote-once.md",
+          "outcome": "pass",
+          "reason": "passed",
+          "verdict": null
+        },
+        {
+          "name": "poll-create-once.md",
+          "outcome": "pass",
+          "reason": "passed",
+          "verdict": null
+        }
+      ],
+      "drift": {
+        "ok": true,
+        "problems": 0
+      }
+    }
+  ]
+}

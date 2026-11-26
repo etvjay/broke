@@ -1,0 +1,78 @@
+evidence: '0.1'
+test: open-the-start-page-of-the-poll-app-in-t-1e1f85c2
+status: passed
+duration_ms: 55260
+external_id:
+  session_id: e437bfc9-e7cc-4597-a0eb-bb9c0603e66b
+  commit_id: e437bfc9-e7cc-4597-a0eb-bb9c0603e66b
+  test_id: 6fbee406-4e14-4f32-a648-35bea891826e
+  testcase_id: 01M8BWMF84NS79WHR4NDKXMS7M
+  project_id: 01M0HVQ571X8ARVW8V01B9FXH5
+  folder_id: 01M0J0NKJF28RDJD0J364SHW7G
+  org_id: '<account-id>'
+  user_name: <account>
+  user_email: <email>
+  sharable_link: https://test-manager.lambdatest.com/projects/01M0HVQ571X8ARVW8V01B9FXH5/test-cases/01M8BWMF84NS79WHR4NDKXMS7M/dashboard/share/<share-token>?type=summary&agentView=true&fqdn=summary-page
+  execution_id: 4710b6d5-26cc-4ca8-8462-f1d7b4568fe4
+environment:
+  model: v16-alpha
+  os: Linux
+  browser: Chrome
+  browser_version: '157'
+  resolution: 1920x1080
+  platform: Desktop
+  platform_type: web
+  os_version: 7.0.0-1011-aws
+steps:
+  - id: 0-1
+    ordinal: 1
+    status: passed
+    kind: navigate
+    duration_ms: 0
+    action_id: 3baf3bec-528c-4e44-8ca0-b458cc469599
+  - id: 0-2
+    ordinal: 2
+    status: passed
+    kind: wait
+    duration_ms: 4300
+    action_id: 3b3d2e02-a507-47ad-af8f-9cad38ea6866
+  - id: 0-3
+    ordinal: 3
+    status: passed
+    kind: type
+    duration_ms: 100
+    action_id: e452795e-36bf-415e-8c30-39f05f044dc4
+  - id: 0-4
+    ordinal: 4
+    status: passed
+    duration_ms: 300
+  - id: 0-5
+    ordinal: 5
+    status: passed
+    kind: type
+    duration_ms: 4600
+    action_id: 58e10e07-9963-4f37-b04e-b6a97825e0fd
+  - id: 0-6
+    ordinal: 6
+    status: passed
+    kind: click
+    duration_ms: 4800
+    action_id: 72c4e283-fe20-4f61-8ad5-d5ca575f8306
+  - id: 0-7
+    ordinal: 7
+    status: passed
+    kind: wait
+    duration_ms: 6400
+    action_id: 6247f71a-dd3e-4dca-b09c-6b45032066cd
+  - id: 0-8
+    ordinal: 8
+    status: passed
+    kind: analyze
+    duration_ms: 17600
+    action_id: 58ce0caf-5ac9-4207-be9f-3f52a4ef842e
+  - id: 0-9
+    ordinal: 9
+    status: passed
+    kind: assert
+    duration_ms: 0
+    action_id: 2ea3e690-d3e0-4154-b230-4d2d2c0b6c97

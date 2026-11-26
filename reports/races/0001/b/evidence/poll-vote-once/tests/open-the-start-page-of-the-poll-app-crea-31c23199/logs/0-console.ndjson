@@ -1,0 +1,2 @@
+{"marker": "step", "step": "0-8", "ordinal": 8}
+{"sequence": 0, "level": "error", "text": "Failed to load resource: the server responded with a status of 409 (Conflict)", "url": "http://localhost:44795/api/polls/4bd2ab30-ba51-4adb-95a1-2356f2f86f88/vote", "line": 0, "step": "0-8"}

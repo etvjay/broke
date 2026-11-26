@@ -1,0 +1,3454 @@
+# Why It Broke report: race 0001 attempt b
+
+Tested commit: 51be7462608c7f0e9b06ac019e11bd51c5b673fc
+
+## Flows
+
+| Flow | Verdict | Detail |
+| --- | --- | --- |
+| poll-create.md | pass | passed, 30 steps, 28.59595 credits, 98.3 s |
+| poll-vote.md | pass | passed, 24 steps, 24.761155000000002 credits, 74.4 s |
+| poll-vote-once.md | pass | passed, 22 steps, 20.950924999999998 credits, 79.2 s |
+| poll-create-once.md | pass | passed, 20 steps, 18.9348975 credits, 72.8 s |
+
+## poll-create.md: pass
+
+- Verdict: pass
+- Reason: passed
+- Evidence: [redacted copy](evidence/poll-create/), 36 text files, manifest sha256 c3074399b7a8eaa0959f382ca36197195d47206c16f405bb5d22a7bff00a96d4
+- Not copied: screenshots and other binary files (21).
+
+Functions that ran in this flow, in file order:
+
+### app/server.mjs:20 createServer
+
+Creates the HTTP server for the poll app. Every request it receives goes to the request handler, which uses the given data file for storage.
+
+Signature: `function createServer({ dataFile })`
+
+<details>
+<summary>Source</summary>
+
+```js
+function createServer({ dataFile }) {
+  const context = { dataFile, queue: Promise.resolve() };
+  return createHttpServer(function handleRequest(req, res) {
+    serveRequest(context, req, res);
+  });
+}
+```
+
+</details>
+
+### app/server.mjs:22 handleRequest
+
+Hands each incoming request to serveRequest. The handler does not wait for it, because serveRequest sends the response itself.
+
+Signature: `function handleRequest(req, res)`
+
+<details>
+<summary>Source</summary>
+
+```js
+function handleRequest(req, res) {
+    serveRequest(context, req, res);
+  }
+```
+
+</details>
+
+### app/server.mjs:27 closeServer
+
+Stops accepting new connections, closes open ones, and exits the process with code 0 once the server has closed.
+
+Signature: `function closeServer(server)`
+
+<details>
+<summary>Source</summary>
+
+```js
+function closeServer(server) {
+  server.closeAllConnections();
+  server.close(function exitAfterClose() {
+    process.exit(0);
+  });
+}
+```
+
+</details>
+
+### app/server.mjs:29 exitAfterClose
+
+Exits the process with code 0 once the server has finished closing.
+
+Signature: `function exitAfterClose()`
+
+<details>
+<summary>Source</summary>
+
+```js
+function exitAfterClose() {
+    process.exit(0);
+  }
+```
+
+</details>
+
+### app/server.mjs:34 serveRequest
+
+Routes one request and turns any error into a response. Known errors send their own status code, and anything else becomes a 500 that the server logs.
+
+Signature: `async function serveRequest(context, req, res)`
+
+<details>
+<summary>Source</summary>
+
+```js
+async function serveRequest(context, req, res) {
+  try {
+    await routeRequest(context, req, res);
+  } catch (error) {
+    if (error.status) {
+      sendJson(res, error.status, { error: error.code });
+      return;
+    }
+    console.error(error);
+    if (res.headersSent) {
+      res.end();
+    } else {
+      sendJson(res, 500, { error: "server_error" });
+    }
+  }
+}
+```
+
+</details>
+
+### app/server.mjs:51 routeRequest
+
+Matches the request method and path to the right handler: the page, the poll list, creating a poll, or voting. The poll list and the vote route receive the browser voter id from its cookie. Unknown routes get a 404.
+
+Signature: `async function routeRequest(context, req, res)`
+
+<details>
+<summary>Source</summary>
+
+```js
+async function routeRequest(context, req, res) {
+  const url = new URL(req.url, "http://localhost");
+  const voterId = ensureVoter(req, res);
+  if (req.method === "GET" && STATIC_FILES.has(url.pathname)) {
+    return sendStatic(res, STATIC_FILES.get(url.pathname));
+  }
+  if (url.pathname === "/api/polls" && req.method === "GET") {
+    return sendPolls(context, res, voterId);
+  }
+  if (url.pathname === "/api/polls" && req.method === "POST") {
+    return addPollRoute(context, req, res);
+  }
+  const vote = VOTE_ROUTE.exec(url.pathname);
+  if (vote && req.method === "POST") {
+    return votePollRoute(context, req, res, vote[1], voterId);
+  }
+  return sendJson(res, 404, { error: "not_found" });
+}
+```
+
+</details>
+
+### app/server.mjs:70 ensureVoter
+
+Returns the voter id from the browser cookie. A browser without a valid cookie gets a new id, and the response sets the cookie.
+
+Signature: `function ensureVoter(req, res)`
+
+<details>
+<summary>Source</summary>
+
+```js
+function ensureVoter(req, res) {
+  const existing = readCookie(req.headers.cookie, VOTER_COOKIE);
+  if (existing && VOTER_ID.test(existing)) return existing;
+  const voterId = randomUUID();
+  res.setHeader("Set-Cookie", `${VOTER_COOKIE}=${voterId}; Path=/; HttpOnly; SameSite=Lax; Max-Age=31536000`);
+  return voterId;
+}
+```
+
+</details>
+
+### app/server.mjs:78 readCookie
+
+Finds one named value in a Cookie header and returns it, or null when the cookie is missing.
+
+Signature: `function readCookie(header, name)`
+
+<details>
+<summary>Source</summary>
+
+```js
+function readCookie(header, name) {
+  if (!header) return null;
+  for (const part of header.split(";")) {
+    const [key, ...value] = part.trim().split("=");
+    if (key === name) return value.join("=");
+  }
+  return null;
+}
+```
+
+</details>
+
+### app/server.mjs:87 sendStatic
+
+Sends one file from the public folder with its content type and a no-store cache header.
+
+Signature: `async function sendStatic(res, entry)`
+
+<details>
+<summary>Source</summary>
+
+```js
+async function sendStatic(res, entry) {
+  const body = await readFile(join(PUBLIC_DIR, entry.file));
+  res.writeHead(200, { "content-type": entry.type, "cache-control": "no-store" });
+  res.end(body);
+}
+```
+
+</details>
+
+### app/server.mjs:93 sendPolls
+
+Reads the poll list from the data file and sends it to the browser in the public shape. Only the browser that asks sees its own choice, marked as yourVote.
+
+Signature: `async function sendPolls(context, res, voterId)`
+
+<details>
+<summary>Source</summary>
+
+```js
+async function sendPolls(context, res, voterId) {
+  const polls = await loadPolls(context.dataFile);
+  sendJson(res, 200, { polls: listPolls(polls, voterId) });
+}
+```
+
+</details>
+
+### app/server.mjs:98 addPollRoute
+
+Reads the new poll from the request body and saves it. It answers 201 with the poll, or 400 with the validation message when the input is not usable.
+
+Signature: `async function addPollRoute(context, req, res)`
+
+<details>
+<summary>Source</summary>
+
+```js
+async function addPollRoute(context, req, res) {
+  const body = await readJsonBody(req);
+  try {
+    const poll = await runExclusive(context, addPollTask, body);
+    sendJson(res, 201, { poll: publicPoll(poll) });
+  } catch (error) {
+    if (error.name !== "ValidationError") throw error;
+    sendJson(res, 400, { error: error.message });
+  }
+}
+```
+
+</details>
+
+### app/server.mjs:119 readJsonBody
+
+Reads the request body, enforces a 10 KB size limit, and parses it as JSON. An empty body counts as an empty object. A body that is too large or not valid JSON becomes an error with a status code.
+
+Signature: `async function readJsonBody(req)`
+
+<details>
+<summary>Source</summary>
+
+```js
+async function readJsonBody(req) {
+  const chunks = [];
+  let size = 0;
+  for await (const chunk of req) {
+    size += chunk.length;
+    if (size > BODY_LIMIT) throw Object.assign(new Error("body_too_large"), { status: 413, code: "body_too_large" });
+    chunks.push(chunk);
+  }
+  const text = Buffer.concat(chunks).toString("utf8");
+  if (text.length === 0) return {};
+  try {
+    return JSON.parse(text);
+  } catch {
+    throw Object.assign(new Error("bad_json"), { status: 400, code: "bad_json" });
+  }
+}
+```
+
+</details>
+
+### app/server.mjs:136 runExclusive
+
+Runs one data task after the task before it finishes, so two writes never overlap. It returns the result of the task, or its error.
+
+Signature: `function runExclusive(context, task, input)`
+
+<details>
+<summary>Source</summary>
+
+```js
+function runExclusive(context, task, input) {
+  const previous = context.queue;
+  let release;
+  context.queue = new Promise(function holdQueue(resolve) {
+    release = resolve;
+  });
+  return previous.then(function runTask() {
+    return task(context.dataFile, input);
+  }).finally(function releaseQueue() {
+    release();
+  });
+}
+```
+
+</details>
+
+### app/server.mjs:139 holdQueue
+
+Stores the release function for the current task, so the next queued task waits until this one finishes.
+
+Signature: `function holdQueue(resolve)`
+
+<details>
+<summary>Source</summary>
+
+```js
+function holdQueue(resolve) {
+    release = resolve;
+  }
+```
+
+</details>
+
+### app/server.mjs:142 runTask
+
+Runs the queued data task once the task before it has finished.
+
+Signature: `function runTask()`
+
+<details>
+<summary>Source</summary>
+
+```js
+function runTask() {
+    return task(context.dataFile, input);
+  }
+```
+
+</details>
+
+### app/server.mjs:144 releaseQueue
+
+Releases the queue after the task finishes, whether it succeeded or failed, so the next queued task can start.
+
+Signature: `function releaseQueue()`
+
+<details>
+<summary>Source</summary>
+
+```js
+function releaseQueue() {
+    release();
+  }
+```
+
+</details>
+
+### app/server.mjs:149 addPollTask
+
+Loads the poll list and returns the matching poll when the same submission arrived moments ago, so a double-click creates only one poll. Otherwise it adds the new poll, saves the list, and returns it. It runs inside the write queue.
+
+Signature: `async function addPollTask(dataFile, input)`
+
+<details>
+<summary>Source</summary>
+
+```js
+async function addPollTask(dataFile, input) {
+  const polls = await loadPolls(dataFile);
+  const duplicate = recentDuplicate(polls, input);
+  if (duplicate) return duplicate;
+  const poll = createPoll(polls, input);
+  await savePolls(dataFile, polls);
+  return poll;
+}
+```
+
+</details>
+
+### app/server.mjs:165 sendJson
+
+Sends a JSON response with the given status code and a correct content length.
+
+Signature: `function sendJson(res, status, payload)`
+
+<details>
+<summary>Source</summary>
+
+```js
+function sendJson(res, status, payload) {
+  const body = JSON.stringify(payload);
+  res.writeHead(status, {
+    "content-type": "application/json; charset=utf-8",
+    "content-length": Buffer.byteLength(body)
+  });
+  res.end(body);
+}
+```
+
+</details>
+
+### app/server.mjs:178 startFromEnvironment
+
+Reads PORT and DATA_FILE from the environment, starts the server, and stops it cleanly on SIGTERM or SIGINT.
+
+Signature: `function startFromEnvironment()`
+
+<details>
+<summary>Source</summary>
+
+```js
+function startFromEnvironment() {
+  const port = Number(process.env.PORT || 3000);
+  const dataFile = process.env.DATA_FILE || "data/polls.json";
+  const server = createServer({ dataFile });
+  function stopOnSignal() {
+    closeServer(server);
+  }
+  process.on("SIGTERM", stopOnSignal);
+  process.on("SIGINT", stopOnSignal);
+  server.listen(port, function announceListening() {
+    console.log(`listening on http://localhost:${server.address().port}`);
+  });
+}
+```
+
+</details>
+
+### app/server.mjs:182 stopOnSignal
+
+Closes the server when the process gets SIGTERM or SIGINT, so the process exits cleanly with code 0.
+
+Signature: `function stopOnSignal()`
+
+<details>
+<summary>Source</summary>
+
+```js
+function stopOnSignal() {
+    closeServer(server);
+  }
+```
+
+</details>
+
+### app/server.mjs:187 announceListening
+
+Prints the address the server listens on once the port is open.
+
+Signature: `function announceListening()`
+
+<details>
+<summary>Source</summary>
+
+```js
+function announceListening() {
+    console.log(`listening on http://localhost:${server.address().port}`);
+  }
+```
+
+</details>
+
+### app/store.mjs:11 loadPolls
+
+Reads the poll list from the JSON data file. A missing file counts as an empty list, and a file that does not hold a list is an error. Each poll is brought up to the current ballot format on the way in.
+
+Signature: `async function loadPolls(file)`
+
+<details>
+<summary>Source</summary>
+
+```js
+async function loadPolls(file) {
+  let text;
+  try {
+    text = await readFile(file, "utf8");
+  } catch (error) {
+    if (error.code === "ENOENT") return [];
+    throw error;
+  }
+  const polls = JSON.parse(text);
+  if (!Array.isArray(polls)) throw new Error(`${file} does not hold a list of polls`);
+  return polls.map(upgradeBallots);
+}
+```
+
+</details>
+
+### app/store.mjs:24 savePolls
+
+Writes the poll list to the data file. It writes a temporary file first and then renames it, so a crash cannot leave a half-written file.
+
+Signature: `async function savePolls(file, polls)`
+
+<details>
+<summary>Source</summary>
+
+```js
+async function savePolls(file, polls) {
+  await mkdir(dirname(file), { recursive: true });
+  const temp = `${file}.${process.pid}.${randomUUID()}.tmp`;
+  await writeFile(temp, `${JSON.stringify(polls, null, 2)}\n`);
+  await rename(temp, file);
+}
+```
+
+</details>
+
+### app/store.mjs:31 createPoll
+
+Checks the question and options, adds a new poll with zero votes and an empty ballot map to the list, and returns it. It throws a validation error when the input is not usable.
+
+Signature: `function createPoll(polls, input)`
+
+<details>
+<summary>Source</summary>
+
+```js
+function createPoll(polls, input) {
+  const poll = {
+    id: randomUUID(),
+    question: cleanText(input?.question, "question", QUESTION_MAX),
+    options: cleanOptions(input?.options).map(startTally),
+    ballots: {},
+    createdAt: new Date().toISOString()
+  };
+  polls.push(poll);
+  return poll;
+}
+```
+
+</details>
+
+### app/store.mjs:43 recentDuplicate
+
+Returns a poll from the last two seconds that has the same question and option labels as the input, or null when there is none. Invalid input has no duplicate, so createPoll still reports the validation error.
+
+Signature: `function recentDuplicate(polls, input)`
+
+<details>
+<summary>Source</summary>
+
+```js
+function recentDuplicate(polls, input) {
+  let question;
+  let labels;
+  try {
+    question = cleanText(input?.question, "question", QUESTION_MAX);
+    labels = cleanOptions(input?.options).map(lowerLabel);
+  } catch {
+    return null;
+  }
+  const cutoff = Date.now() - DUPLICATE_WINDOW_MS;
+  for (const poll of polls) {
+    if (Date.parse(poll.createdAt) < cutoff) continue;
+    if (poll.question !== question) continue;
+    if (poll.options.length !== labels.length) continue;
+    let same = true;
+    for (let index = 0; index < labels.length; index += 1) {
+      if (lowerLabel(poll.options[index].label) !== labels[index]) {
+        same = false;
+        break;
+      }
+    }
+    if (same) return poll;
+  }
+  return null;
+}
+```
+
+</details>
+
+### app/store.mjs:88 listPolls
+
+Returns every poll in a form safe to send to the browser, without voter ids, with the newest poll first. Each poll says which option the given voter chose, or null when that voter has not chosen one or no voter is given.
+
+Signature: `function listPolls(polls, voterId)`
+
+<details>
+<summary>Source</summary>
+
+```js
+function listPolls(polls, voterId) {
+  return polls.toReversed().map(function viewFor(poll) {
+    return publicPoll(poll, voterId);
+  });
+}
+```
+
+</details>
+
+### app/store.mjs:89 viewFor
+
+Shapes one poll for the voter who asked for the list. listPolls applies it to every poll in the list.
+
+Signature: `function viewFor(poll)`
+
+<details>
+<summary>Source</summary>
+
+```js
+function viewFor(poll) {
+    return publicPoll(poll, voterId);
+  }
+```
+
+</details>
+
+### app/store.mjs:94 publicPoll
+
+Copies one poll into the public shape: id, question, option tallies, total votes, the choice of the given voter, and the creation time. The choice is null when no voter is given.
+
+Signature: `function publicPoll(poll, voterId)`
+
+<details>
+<summary>Source</summary>
+
+```js
+function publicPoll(poll, voterId) {
+  return {
+    id: poll.id,
+    question: poll.question,
+    options: poll.options.map(copyTally),
+    totalVotes: poll.options.reduce(addVotes, 0),
+    yourVote: ballotOf(poll, voterId),
+    createdAt: poll.createdAt
+  };
+}
+```
+
+</details>
+
+### app/store.mjs:105 cleanText
+
+Trims a text value and rejects it when it is missing, empty, not text, or longer than the limit.
+
+Signature: `function cleanText(value, label, max)`
+
+<details>
+<summary>Source</summary>
+
+```js
+function cleanText(value, label, max) {
+  if (typeof value !== "string") throw invalid(`${label} must be text`);
+  const text = value.trim();
+  if (text.length === 0) throw invalid(`${label} is required`);
+  if (text.length > max) throw invalid(`${label} must be ${max} characters or fewer`);
+  return text;
+}
+```
+
+</details>
+
+### app/store.mjs:113 cleanOptions
+
+Checks that the options are a list of two to ten valid option labels, and returns them cleaned. Two labels that match without regard to case or outer spaces are refused.
+
+Signature: `function cleanOptions(value)`
+
+<details>
+<summary>Source</summary>
+
+```js
+function cleanOptions(value) {
+  if (!Array.isArray(value)) throw invalid("options must be a list");
+  if (value.length < OPTIONS_MIN || value.length > OPTIONS_MAX) {
+    throw invalid(`options must have ${OPTIONS_MIN} to ${OPTIONS_MAX} entries`);
+  }
+  const options = value.map(cleanOption);
+  if (new Set(options.map(lowerLabel)).size < options.length) {
+    throw invalid("options must be different from each other");
+  }
+  return options;
+}
+```
+
+</details>
+
+### app/store.mjs:125 cleanOption
+
+Cleans one option label using the option length limit.
+
+Signature: `function cleanOption(value)`
+
+<details>
+<summary>Source</summary>
+
+```js
+function cleanOption(value) {
+  return cleanText(value, "option", OPTION_MAX);
+}
+```
+
+</details>
+
+### app/store.mjs:129 lowerLabel
+
+Makes an option label ready for the repeat check. Each run of spaces or tabs becomes one space, and letters become lowercase, so labels that read the same compare equal.
+
+Signature: `function lowerLabel(label)`
+
+<details>
+<summary>Source</summary>
+
+```js
+function lowerLabel(label) {
+  return label.replace(/\s+/g, " ").toLowerCase();
+}
+```
+
+</details>
+
+### app/store.mjs:133 startTally
+
+Turns one option label into a tally with zero votes.
+
+Signature: `function startTally(label)`
+
+<details>
+<summary>Source</summary>
+
+```js
+function startTally(label) {
+  return { label, votes: 0 };
+}
+```
+
+</details>
+
+### app/store.mjs:137 copyTally
+
+Copies one option tally so that callers cannot change the stored poll.
+
+Signature: `function copyTally(tally)`
+
+<details>
+<summary>Source</summary>
+
+```js
+function copyTally(tally) {
+  return { label: tally.label, votes: tally.votes };
+}
+```
+
+</details>
+
+### app/store.mjs:141 addVotes
+
+Adds the votes of one option to a running total. It counts all votes in a poll.
+
+Signature: `function addVotes(total, tally)`
+
+<details>
+<summary>Source</summary>
+
+```js
+function addVotes(total, tally) {
+  return total + tally.votes;
+}
+```
+
+</details>
+
+### app/store.mjs:145 upgradeBallots
+
+Gives a poll saved with the old voter list a ballot map. Each old voter gets an entry with a null choice, because the old format did not record which option they picked. A poll that already has a ballot map is returned unchanged.
+
+Signature: `function upgradeBallots(poll)`
+
+<details>
+<summary>Source</summary>
+
+```js
+function upgradeBallots(poll) {
+  if (poll.ballots) return poll;
+  const { voters = [], ...rest } = poll;
+  const ballots = {};
+  for (const voterId of voters) ballots[voterId] = null;
+  return { ...rest, ballots };
+}
+```
+
+</details>
+
+### app/store.mjs:153 ballotOf
+
+Returns the option index that one voter chose in a poll. It returns null when the voter has not voted, and also for an old voter whose choice was never recorded.
+
+Signature: `function ballotOf(poll, voterId)`
+
+<details>
+<summary>Source</summary>
+
+```js
+function ballotOf(poll, voterId) {
+  return Object.hasOwn(poll.ballots, voterId) ? poll.ballots[voterId] : null;
+}
+```
+
+</details>
+
+### app/store.mjs:157 invalid
+
+Builds a validation error with the given message and the name ValidationError, so the server can answer with a 400 response.
+
+Signature: `function invalid(message)`
+
+<details>
+<summary>Source</summary>
+
+```js
+function invalid(message) {
+  return Object.assign(new Error(message), { name: "ValidationError" });
+}
+```
+
+</details>
+
+## poll-vote.md: pass
+
+- Verdict: pass
+- Reason: passed
+- Evidence: [redacted copy](evidence/poll-vote/), 27 text files, manifest sha256 0612d955c149e1222d0875d269f0f0768e0a9c325d820d058db047d7bb6d3b9d
+- Not copied: screenshots and other binary files (16).
+
+Functions that ran in this flow, in file order:
+
+### app/server.mjs:20 createServer
+
+Creates the HTTP server for the poll app. Every request it receives goes to the request handler, which uses the given data file for storage.
+
+Signature: `function createServer({ dataFile })`
+
+<details>
+<summary>Source</summary>
+
+```js
+function createServer({ dataFile }) {
+  const context = { dataFile, queue: Promise.resolve() };
+  return createHttpServer(function handleRequest(req, res) {
+    serveRequest(context, req, res);
+  });
+}
+```
+
+</details>
+
+### app/server.mjs:22 handleRequest
+
+Hands each incoming request to serveRequest. The handler does not wait for it, because serveRequest sends the response itself.
+
+Signature: `function handleRequest(req, res)`
+
+<details>
+<summary>Source</summary>
+
+```js
+function handleRequest(req, res) {
+    serveRequest(context, req, res);
+  }
+```
+
+</details>
+
+### app/server.mjs:27 closeServer
+
+Stops accepting new connections, closes open ones, and exits the process with code 0 once the server has closed.
+
+Signature: `function closeServer(server)`
+
+<details>
+<summary>Source</summary>
+
+```js
+function closeServer(server) {
+  server.closeAllConnections();
+  server.close(function exitAfterClose() {
+    process.exit(0);
+  });
+}
+```
+
+</details>
+
+### app/server.mjs:29 exitAfterClose
+
+Exits the process with code 0 once the server has finished closing.
+
+Signature: `function exitAfterClose()`
+
+<details>
+<summary>Source</summary>
+
+```js
+function exitAfterClose() {
+    process.exit(0);
+  }
+```
+
+</details>
+
+### app/server.mjs:34 serveRequest
+
+Routes one request and turns any error into a response. Known errors send their own status code, and anything else becomes a 500 that the server logs.
+
+Signature: `async function serveRequest(context, req, res)`
+
+<details>
+<summary>Source</summary>
+
+```js
+async function serveRequest(context, req, res) {
+  try {
+    await routeRequest(context, req, res);
+  } catch (error) {
+    if (error.status) {
+      sendJson(res, error.status, { error: error.code });
+      return;
+    }
+    console.error(error);
+    if (res.headersSent) {
+      res.end();
+    } else {
+      sendJson(res, 500, { error: "server_error" });
+    }
+  }
+}
+```
+
+</details>
+
+### app/server.mjs:51 routeRequest
+
+Matches the request method and path to the right handler: the page, the poll list, creating a poll, or voting. The poll list and the vote route receive the browser voter id from its cookie. Unknown routes get a 404.
+
+Signature: `async function routeRequest(context, req, res)`
+
+<details>
+<summary>Source</summary>
+
+```js
+async function routeRequest(context, req, res) {
+  const url = new URL(req.url, "http://localhost");
+  const voterId = ensureVoter(req, res);
+  if (req.method === "GET" && STATIC_FILES.has(url.pathname)) {
+    return sendStatic(res, STATIC_FILES.get(url.pathname));
+  }
+  if (url.pathname === "/api/polls" && req.method === "GET") {
+    return sendPolls(context, res, voterId);
+  }
+  if (url.pathname === "/api/polls" && req.method === "POST") {
+    return addPollRoute(context, req, res);
+  }
+  const vote = VOTE_ROUTE.exec(url.pathname);
+  if (vote && req.method === "POST") {
+    return votePollRoute(context, req, res, vote[1], voterId);
+  }
+  return sendJson(res, 404, { error: "not_found" });
+}
+```
+
+</details>
+
+### app/server.mjs:70 ensureVoter
+
+Returns the voter id from the browser cookie. A browser without a valid cookie gets a new id, and the response sets the cookie.
+
+Signature: `function ensureVoter(req, res)`
+
+<details>
+<summary>Source</summary>
+
+```js
+function ensureVoter(req, res) {
+  const existing = readCookie(req.headers.cookie, VOTER_COOKIE);
+  if (existing && VOTER_ID.test(existing)) return existing;
+  const voterId = randomUUID();
+  res.setHeader("Set-Cookie", `${VOTER_COOKIE}=${voterId}; Path=/; HttpOnly; SameSite=Lax; Max-Age=31536000`);
+  return voterId;
+}
+```
+
+</details>
+
+### app/server.mjs:78 readCookie
+
+Finds one named value in a Cookie header and returns it, or null when the cookie is missing.
+
+Signature: `function readCookie(header, name)`
+
+<details>
+<summary>Source</summary>
+
+```js
+function readCookie(header, name) {
+  if (!header) return null;
+  for (const part of header.split(";")) {
+    const [key, ...value] = part.trim().split("=");
+    if (key === name) return value.join("=");
+  }
+  return null;
+}
+```
+
+</details>
+
+### app/server.mjs:87 sendStatic
+
+Sends one file from the public folder with its content type and a no-store cache header.
+
+Signature: `async function sendStatic(res, entry)`
+
+<details>
+<summary>Source</summary>
+
+```js
+async function sendStatic(res, entry) {
+  const body = await readFile(join(PUBLIC_DIR, entry.file));
+  res.writeHead(200, { "content-type": entry.type, "cache-control": "no-store" });
+  res.end(body);
+}
+```
+
+</details>
+
+### app/server.mjs:93 sendPolls
+
+Reads the poll list from the data file and sends it to the browser in the public shape. Only the browser that asks sees its own choice, marked as yourVote.
+
+Signature: `async function sendPolls(context, res, voterId)`
+
+<details>
+<summary>Source</summary>
+
+```js
+async function sendPolls(context, res, voterId) {
+  const polls = await loadPolls(context.dataFile);
+  sendJson(res, 200, { polls: listPolls(polls, voterId) });
+}
+```
+
+</details>
+
+### app/server.mjs:98 addPollRoute
+
+Reads the new poll from the request body and saves it. It answers 201 with the poll, or 400 with the validation message when the input is not usable.
+
+Signature: `async function addPollRoute(context, req, res)`
+
+<details>
+<summary>Source</summary>
+
+```js
+async function addPollRoute(context, req, res) {
+  const body = await readJsonBody(req);
+  try {
+    const poll = await runExclusive(context, addPollTask, body);
+    sendJson(res, 201, { poll: publicPoll(poll) });
+  } catch (error) {
+    if (error.name !== "ValidationError") throw error;
+    sendJson(res, 400, { error: error.message });
+  }
+}
+```
+
+</details>
+
+### app/server.mjs:109 votePollRoute
+
+Reads the chosen option from the request body and records the vote. It answers 200 with the updated poll, or the matching error status for an unknown poll, a bad option, or a repeat vote.
+
+Signature: `async function votePollRoute(context, req, res, pollId, voterId)`
+
+<details>
+<summary>Source</summary>
+
+```js
+async function votePollRoute(context, req, res, pollId, voterId) {
+  const body = await readJsonBody(req);
+  const outcome = await runExclusive(context, castVoteTask, { pollId, option: body?.option, voterId });
+  if (outcome.result.ok) {
+    sendJson(res, 200, { poll: outcome.poll });
+  } else {
+    sendJson(res, VOTE_STATUS[outcome.result.reason], { error: outcome.result.reason });
+  }
+}
+```
+
+</details>
+
+### app/server.mjs:119 readJsonBody
+
+Reads the request body, enforces a 10 KB size limit, and parses it as JSON. An empty body counts as an empty object. A body that is too large or not valid JSON becomes an error with a status code.
+
+Signature: `async function readJsonBody(req)`
+
+<details>
+<summary>Source</summary>
+
+```js
+async function readJsonBody(req) {
+  const chunks = [];
+  let size = 0;
+  for await (const chunk of req) {
+    size += chunk.length;
+    if (size > BODY_LIMIT) throw Object.assign(new Error("body_too_large"), { status: 413, code: "body_too_large" });
+    chunks.push(chunk);
+  }
+  const text = Buffer.concat(chunks).toString("utf8");
+  if (text.length === 0) return {};
+  try {
+    return JSON.parse(text);
+  } catch {
+    throw Object.assign(new Error("bad_json"), { status: 400, code: "bad_json" });
+  }
+}
+```
+
+</details>
+
+### app/server.mjs:136 runExclusive
+
+Runs one data task after the task before it finishes, so two writes never overlap. It returns the result of the task, or its error.
+
+Signature: `function runExclusive(context, task, input)`
+
+<details>
+<summary>Source</summary>
+
+```js
+function runExclusive(context, task, input) {
+  const previous = context.queue;
+  let release;
+  context.queue = new Promise(function holdQueue(resolve) {
+    release = resolve;
+  });
+  return previous.then(function runTask() {
+    return task(context.dataFile, input);
+  }).finally(function releaseQueue() {
+    release();
+  });
+}
+```
+
+</details>
+
+### app/server.mjs:139 holdQueue
+
+Stores the release function for the current task, so the next queued task waits until this one finishes.
+
+Signature: `function holdQueue(resolve)`
+
+<details>
+<summary>Source</summary>
+
+```js
+function holdQueue(resolve) {
+    release = resolve;
+  }
+```
+
+</details>
+
+### app/server.mjs:142 runTask
+
+Runs the queued data task once the task before it has finished.
+
+Signature: `function runTask()`
+
+<details>
+<summary>Source</summary>
+
+```js
+function runTask() {
+    return task(context.dataFile, input);
+  }
+```
+
+</details>
+
+### app/server.mjs:144 releaseQueue
+
+Releases the queue after the task finishes, whether it succeeded or failed, so the next queued task can start.
+
+Signature: `function releaseQueue()`
+
+<details>
+<summary>Source</summary>
+
+```js
+function releaseQueue() {
+    release();
+  }
+```
+
+</details>
+
+### app/server.mjs:149 addPollTask
+
+Loads the poll list and returns the matching poll when the same submission arrived moments ago, so a double-click creates only one poll. Otherwise it adds the new poll, saves the list, and returns it. It runs inside the write queue.
+
+Signature: `async function addPollTask(dataFile, input)`
+
+<details>
+<summary>Source</summary>
+
+```js
+async function addPollTask(dataFile, input) {
+  const polls = await loadPolls(dataFile);
+  const duplicate = recentDuplicate(polls, input);
+  if (duplicate) return duplicate;
+  const poll = createPoll(polls, input);
+  await savePolls(dataFile, polls);
+  return poll;
+}
+```
+
+</details>
+
+### app/server.mjs:158 castVoteTask
+
+Loads the poll list, records the vote, and saves the list only when the vote counted. It returns the outcome and the updated poll as the voter sees it.
+
+Signature: `async function castVoteTask(dataFile, input)`
+
+<details>
+<summary>Source</summary>
+
+```js
+async function castVoteTask(dataFile, input) {
+  const polls = await loadPolls(dataFile);
+  const result = castVote(polls, input.pollId, input.option, input.voterId);
+  if (result.ok) await savePolls(dataFile, polls);
+  return { result, poll: result.ok ? publicPoll(findPoll(polls, input.pollId), input.voterId) : null };
+}
+```
+
+</details>
+
+### app/server.mjs:165 sendJson
+
+Sends a JSON response with the given status code and a correct content length.
+
+Signature: `function sendJson(res, status, payload)`
+
+<details>
+<summary>Source</summary>
+
+```js
+function sendJson(res, status, payload) {
+  const body = JSON.stringify(payload);
+  res.writeHead(status, {
+    "content-type": "application/json; charset=utf-8",
+    "content-length": Buffer.byteLength(body)
+  });
+  res.end(body);
+}
+```
+
+</details>
+
+### app/server.mjs:178 startFromEnvironment
+
+Reads PORT and DATA_FILE from the environment, starts the server, and stops it cleanly on SIGTERM or SIGINT.
+
+Signature: `function startFromEnvironment()`
+
+<details>
+<summary>Source</summary>
+
+```js
+function startFromEnvironment() {
+  const port = Number(process.env.PORT || 3000);
+  const dataFile = process.env.DATA_FILE || "data/polls.json";
+  const server = createServer({ dataFile });
+  function stopOnSignal() {
+    closeServer(server);
+  }
+  process.on("SIGTERM", stopOnSignal);
+  process.on("SIGINT", stopOnSignal);
+  server.listen(port, function announceListening() {
+    console.log(`listening on http://localhost:${server.address().port}`);
+  });
+}
+```
+
+</details>
+
+### app/server.mjs:182 stopOnSignal
+
+Closes the server when the process gets SIGTERM or SIGINT, so the process exits cleanly with code 0.
+
+Signature: `function stopOnSignal()`
+
+<details>
+<summary>Source</summary>
+
+```js
+function stopOnSignal() {
+    closeServer(server);
+  }
+```
+
+</details>
+
+### app/server.mjs:187 announceListening
+
+Prints the address the server listens on once the port is open.
+
+Signature: `function announceListening()`
+
+<details>
+<summary>Source</summary>
+
+```js
+function announceListening() {
+    console.log(`listening on http://localhost:${server.address().port}`);
+  }
+```
+
+</details>
+
+### app/store.mjs:11 loadPolls
+
+Reads the poll list from the JSON data file. A missing file counts as an empty list, and a file that does not hold a list is an error. Each poll is brought up to the current ballot format on the way in.
+
+Signature: `async function loadPolls(file)`
+
+<details>
+<summary>Source</summary>
+
+```js
+async function loadPolls(file) {
+  let text;
+  try {
+    text = await readFile(file, "utf8");
+  } catch (error) {
+    if (error.code === "ENOENT") return [];
+    throw error;
+  }
+  const polls = JSON.parse(text);
+  if (!Array.isArray(polls)) throw new Error(`${file} does not hold a list of polls`);
+  return polls.map(upgradeBallots);
+}
+```
+
+</details>
+
+### app/store.mjs:24 savePolls
+
+Writes the poll list to the data file. It writes a temporary file first and then renames it, so a crash cannot leave a half-written file.
+
+Signature: `async function savePolls(file, polls)`
+
+<details>
+<summary>Source</summary>
+
+```js
+async function savePolls(file, polls) {
+  await mkdir(dirname(file), { recursive: true });
+  const temp = `${file}.${process.pid}.${randomUUID()}.tmp`;
+  await writeFile(temp, `${JSON.stringify(polls, null, 2)}\n`);
+  await rename(temp, file);
+}
+```
+
+</details>
+
+### app/store.mjs:31 createPoll
+
+Checks the question and options, adds a new poll with zero votes and an empty ballot map to the list, and returns it. It throws a validation error when the input is not usable.
+
+Signature: `function createPoll(polls, input)`
+
+<details>
+<summary>Source</summary>
+
+```js
+function createPoll(polls, input) {
+  const poll = {
+    id: randomUUID(),
+    question: cleanText(input?.question, "question", QUESTION_MAX),
+    options: cleanOptions(input?.options).map(startTally),
+    ballots: {},
+    createdAt: new Date().toISOString()
+  };
+  polls.push(poll);
+  return poll;
+}
+```
+
+</details>
+
+### app/store.mjs:43 recentDuplicate
+
+Returns a poll from the last two seconds that has the same question and option labels as the input, or null when there is none. Invalid input has no duplicate, so createPoll still reports the validation error.
+
+Signature: `function recentDuplicate(polls, input)`
+
+<details>
+<summary>Source</summary>
+
+```js
+function recentDuplicate(polls, input) {
+  let question;
+  let labels;
+  try {
+    question = cleanText(input?.question, "question", QUESTION_MAX);
+    labels = cleanOptions(input?.options).map(lowerLabel);
+  } catch {
+    return null;
+  }
+  const cutoff = Date.now() - DUPLICATE_WINDOW_MS;
+  for (const poll of polls) {
+    if (Date.parse(poll.createdAt) < cutoff) continue;
+    if (poll.question !== question) continue;
+    if (poll.options.length !== labels.length) continue;
+    let same = true;
+    for (let index = 0; index < labels.length; index += 1) {
+      if (lowerLabel(poll.options[index].label) !== labels[index]) {
+        same = false;
+        break;
+      }
+    }
+    if (same) return poll;
+  }
+  return null;
+}
+```
+
+</details>
+
+### app/store.mjs:69 castVote
+
+Records one vote for an option in a poll. It refuses an unknown poll, an option that does not exist, and a second vote from the same voter. A counted vote goes into the ballot map, so the voter can see their own choice later.
+
+Signature: `function castVote(polls, pollId, optionIndex, voterId)`
+
+<details>
+<summary>Source</summary>
+
+```js
+function castVote(polls, pollId, optionIndex, voterId) {
+  const poll = findPoll(polls, pollId);
+  if (!poll) return { ok: false, reason: "not_found" };
+  if (!Number.isInteger(optionIndex) || optionIndex < 0 || optionIndex >= poll.options.length) {
+    return { ok: false, reason: "bad_option" };
+  }
+  if (Object.hasOwn(poll.ballots, voterId)) return { ok: false, reason: "already_voted" };
+  poll.options[optionIndex].votes += 1;
+  poll.ballots[voterId] = optionIndex;
+  return { ok: true };
+}
+```
+
+</details>
+
+### app/store.mjs:81 findPoll
+
+Returns the poll with the given id from the list, or null when no poll has that id.
+
+Signature: `function findPoll(polls, pollId)`
+
+<details>
+<summary>Source</summary>
+
+```js
+function findPoll(polls, pollId) {
+  for (const poll of polls) {
+    if (poll.id === pollId) return poll;
+  }
+  return null;
+}
+```
+
+</details>
+
+### app/store.mjs:88 listPolls
+
+Returns every poll in a form safe to send to the browser, without voter ids, with the newest poll first. Each poll says which option the given voter chose, or null when that voter has not chosen one or no voter is given.
+
+Signature: `function listPolls(polls, voterId)`
+
+<details>
+<summary>Source</summary>
+
+```js
+function listPolls(polls, voterId) {
+  return polls.toReversed().map(function viewFor(poll) {
+    return publicPoll(poll, voterId);
+  });
+}
+```
+
+</details>
+
+### app/store.mjs:89 viewFor
+
+Shapes one poll for the voter who asked for the list. listPolls applies it to every poll in the list.
+
+Signature: `function viewFor(poll)`
+
+<details>
+<summary>Source</summary>
+
+```js
+function viewFor(poll) {
+    return publicPoll(poll, voterId);
+  }
+```
+
+</details>
+
+### app/store.mjs:94 publicPoll
+
+Copies one poll into the public shape: id, question, option tallies, total votes, the choice of the given voter, and the creation time. The choice is null when no voter is given.
+
+Signature: `function publicPoll(poll, voterId)`
+
+<details>
+<summary>Source</summary>
+
+```js
+function publicPoll(poll, voterId) {
+  return {
+    id: poll.id,
+    question: poll.question,
+    options: poll.options.map(copyTally),
+    totalVotes: poll.options.reduce(addVotes, 0),
+    yourVote: ballotOf(poll, voterId),
+    createdAt: poll.createdAt
+  };
+}
+```
+
+</details>
+
+### app/store.mjs:105 cleanText
+
+Trims a text value and rejects it when it is missing, empty, not text, or longer than the limit.
+
+Signature: `function cleanText(value, label, max)`
+
+<details>
+<summary>Source</summary>
+
+```js
+function cleanText(value, label, max) {
+  if (typeof value !== "string") throw invalid(`${label} must be text`);
+  const text = value.trim();
+  if (text.length === 0) throw invalid(`${label} is required`);
+  if (text.length > max) throw invalid(`${label} must be ${max} characters or fewer`);
+  return text;
+}
+```
+
+</details>
+
+### app/store.mjs:113 cleanOptions
+
+Checks that the options are a list of two to ten valid option labels, and returns them cleaned. Two labels that match without regard to case or outer spaces are refused.
+
+Signature: `function cleanOptions(value)`
+
+<details>
+<summary>Source</summary>
+
+```js
+function cleanOptions(value) {
+  if (!Array.isArray(value)) throw invalid("options must be a list");
+  if (value.length < OPTIONS_MIN || value.length > OPTIONS_MAX) {
+    throw invalid(`options must have ${OPTIONS_MIN} to ${OPTIONS_MAX} entries`);
+  }
+  const options = value.map(cleanOption);
+  if (new Set(options.map(lowerLabel)).size < options.length) {
+    throw invalid("options must be different from each other");
+  }
+  return options;
+}
+```
+
+</details>
+
+### app/store.mjs:125 cleanOption
+
+Cleans one option label using the option length limit.
+
+Signature: `function cleanOption(value)`
+
+<details>
+<summary>Source</summary>
+
+```js
+function cleanOption(value) {
+  return cleanText(value, "option", OPTION_MAX);
+}
+```
+
+</details>
+
+### app/store.mjs:129 lowerLabel
+
+Makes an option label ready for the repeat check. Each run of spaces or tabs becomes one space, and letters become lowercase, so labels that read the same compare equal.
+
+Signature: `function lowerLabel(label)`
+
+<details>
+<summary>Source</summary>
+
+```js
+function lowerLabel(label) {
+  return label.replace(/\s+/g, " ").toLowerCase();
+}
+```
+
+</details>
+
+### app/store.mjs:133 startTally
+
+Turns one option label into a tally with zero votes.
+
+Signature: `function startTally(label)`
+
+<details>
+<summary>Source</summary>
+
+```js
+function startTally(label) {
+  return { label, votes: 0 };
+}
+```
+
+</details>
+
+### app/store.mjs:137 copyTally
+
+Copies one option tally so that callers cannot change the stored poll.
+
+Signature: `function copyTally(tally)`
+
+<details>
+<summary>Source</summary>
+
+```js
+function copyTally(tally) {
+  return { label: tally.label, votes: tally.votes };
+}
+```
+
+</details>
+
+### app/store.mjs:141 addVotes
+
+Adds the votes of one option to a running total. It counts all votes in a poll.
+
+Signature: `function addVotes(total, tally)`
+
+<details>
+<summary>Source</summary>
+
+```js
+function addVotes(total, tally) {
+  return total + tally.votes;
+}
+```
+
+</details>
+
+### app/store.mjs:145 upgradeBallots
+
+Gives a poll saved with the old voter list a ballot map. Each old voter gets an entry with a null choice, because the old format did not record which option they picked. A poll that already has a ballot map is returned unchanged.
+
+Signature: `function upgradeBallots(poll)`
+
+<details>
+<summary>Source</summary>
+
+```js
+function upgradeBallots(poll) {
+  if (poll.ballots) return poll;
+  const { voters = [], ...rest } = poll;
+  const ballots = {};
+  for (const voterId of voters) ballots[voterId] = null;
+  return { ...rest, ballots };
+}
+```
+
+</details>
+
+### app/store.mjs:153 ballotOf
+
+Returns the option index that one voter chose in a poll. It returns null when the voter has not voted, and also for an old voter whose choice was never recorded.
+
+Signature: `function ballotOf(poll, voterId)`
+
+<details>
+<summary>Source</summary>
+
+```js
+function ballotOf(poll, voterId) {
+  return Object.hasOwn(poll.ballots, voterId) ? poll.ballots[voterId] : null;
+}
+```
+
+</details>
+
+## poll-vote-once.md: pass
+
+- Verdict: pass
+- Reason: passed
+- Evidence: [redacted copy](evidence/poll-vote-once/), 26 text files, manifest sha256 0a17bd74d1e6743162d62c2c5fdc84cd2505e5e3cc449f41d066506c6041587b
+- Not copied: screenshots and other binary files (16).
+
+Functions that ran in this flow, in file order:
+
+### app/server.mjs:20 createServer
+
+Creates the HTTP server for the poll app. Every request it receives goes to the request handler, which uses the given data file for storage.
+
+Signature: `function createServer({ dataFile })`
+
+<details>
+<summary>Source</summary>
+
+```js
+function createServer({ dataFile }) {
+  const context = { dataFile, queue: Promise.resolve() };
+  return createHttpServer(function handleRequest(req, res) {
+    serveRequest(context, req, res);
+  });
+}
+```
+
+</details>
+
+### app/server.mjs:22 handleRequest
+
+Hands each incoming request to serveRequest. The handler does not wait for it, because serveRequest sends the response itself.
+
+Signature: `function handleRequest(req, res)`
+
+<details>
+<summary>Source</summary>
+
+```js
+function handleRequest(req, res) {
+    serveRequest(context, req, res);
+  }
+```
+
+</details>
+
+### app/server.mjs:27 closeServer
+
+Stops accepting new connections, closes open ones, and exits the process with code 0 once the server has closed.
+
+Signature: `function closeServer(server)`
+
+<details>
+<summary>Source</summary>
+
+```js
+function closeServer(server) {
+  server.closeAllConnections();
+  server.close(function exitAfterClose() {
+    process.exit(0);
+  });
+}
+```
+
+</details>
+
+### app/server.mjs:29 exitAfterClose
+
+Exits the process with code 0 once the server has finished closing.
+
+Signature: `function exitAfterClose()`
+
+<details>
+<summary>Source</summary>
+
+```js
+function exitAfterClose() {
+    process.exit(0);
+  }
+```
+
+</details>
+
+### app/server.mjs:34 serveRequest
+
+Routes one request and turns any error into a response. Known errors send their own status code, and anything else becomes a 500 that the server logs.
+
+Signature: `async function serveRequest(context, req, res)`
+
+<details>
+<summary>Source</summary>
+
+```js
+async function serveRequest(context, req, res) {
+  try {
+    await routeRequest(context, req, res);
+  } catch (error) {
+    if (error.status) {
+      sendJson(res, error.status, { error: error.code });
+      return;
+    }
+    console.error(error);
+    if (res.headersSent) {
+      res.end();
+    } else {
+      sendJson(res, 500, { error: "server_error" });
+    }
+  }
+}
+```
+
+</details>
+
+### app/server.mjs:51 routeRequest
+
+Matches the request method and path to the right handler: the page, the poll list, creating a poll, or voting. The poll list and the vote route receive the browser voter id from its cookie. Unknown routes get a 404.
+
+Signature: `async function routeRequest(context, req, res)`
+
+<details>
+<summary>Source</summary>
+
+```js
+async function routeRequest(context, req, res) {
+  const url = new URL(req.url, "http://localhost");
+  const voterId = ensureVoter(req, res);
+  if (req.method === "GET" && STATIC_FILES.has(url.pathname)) {
+    return sendStatic(res, STATIC_FILES.get(url.pathname));
+  }
+  if (url.pathname === "/api/polls" && req.method === "GET") {
+    return sendPolls(context, res, voterId);
+  }
+  if (url.pathname === "/api/polls" && req.method === "POST") {
+    return addPollRoute(context, req, res);
+  }
+  const vote = VOTE_ROUTE.exec(url.pathname);
+  if (vote && req.method === "POST") {
+    return votePollRoute(context, req, res, vote[1], voterId);
+  }
+  return sendJson(res, 404, { error: "not_found" });
+}
+```
+
+</details>
+
+### app/server.mjs:70 ensureVoter
+
+Returns the voter id from the browser cookie. A browser without a valid cookie gets a new id, and the response sets the cookie.
+
+Signature: `function ensureVoter(req, res)`
+
+<details>
+<summary>Source</summary>
+
+```js
+function ensureVoter(req, res) {
+  const existing = readCookie(req.headers.cookie, VOTER_COOKIE);
+  if (existing && VOTER_ID.test(existing)) return existing;
+  const voterId = randomUUID();
+  res.setHeader("Set-Cookie", `${VOTER_COOKIE}=${voterId}; Path=/; HttpOnly; SameSite=Lax; Max-Age=31536000`);
+  return voterId;
+}
+```
+
+</details>
+
+### app/server.mjs:78 readCookie
+
+Finds one named value in a Cookie header and returns it, or null when the cookie is missing.
+
+Signature: `function readCookie(header, name)`
+
+<details>
+<summary>Source</summary>
+
+```js
+function readCookie(header, name) {
+  if (!header) return null;
+  for (const part of header.split(";")) {
+    const [key, ...value] = part.trim().split("=");
+    if (key === name) return value.join("=");
+  }
+  return null;
+}
+```
+
+</details>
+
+### app/server.mjs:87 sendStatic
+
+Sends one file from the public folder with its content type and a no-store cache header.
+
+Signature: `async function sendStatic(res, entry)`
+
+<details>
+<summary>Source</summary>
+
+```js
+async function sendStatic(res, entry) {
+  const body = await readFile(join(PUBLIC_DIR, entry.file));
+  res.writeHead(200, { "content-type": entry.type, "cache-control": "no-store" });
+  res.end(body);
+}
+```
+
+</details>
+
+### app/server.mjs:93 sendPolls
+
+Reads the poll list from the data file and sends it to the browser in the public shape. Only the browser that asks sees its own choice, marked as yourVote.
+
+Signature: `async function sendPolls(context, res, voterId)`
+
+<details>
+<summary>Source</summary>
+
+```js
+async function sendPolls(context, res, voterId) {
+  const polls = await loadPolls(context.dataFile);
+  sendJson(res, 200, { polls: listPolls(polls, voterId) });
+}
+```
+
+</details>
+
+### app/server.mjs:98 addPollRoute
+
+Reads the new poll from the request body and saves it. It answers 201 with the poll, or 400 with the validation message when the input is not usable.
+
+Signature: `async function addPollRoute(context, req, res)`
+
+<details>
+<summary>Source</summary>
+
+```js
+async function addPollRoute(context, req, res) {
+  const body = await readJsonBody(req);
+  try {
+    const poll = await runExclusive(context, addPollTask, body);
+    sendJson(res, 201, { poll: publicPoll(poll) });
+  } catch (error) {
+    if (error.name !== "ValidationError") throw error;
+    sendJson(res, 400, { error: error.message });
+  }
+}
+```
+
+</details>
+
+### app/server.mjs:109 votePollRoute
+
+Reads the chosen option from the request body and records the vote. It answers 200 with the updated poll, or the matching error status for an unknown poll, a bad option, or a repeat vote.
+
+Signature: `async function votePollRoute(context, req, res, pollId, voterId)`
+
+<details>
+<summary>Source</summary>
+
+```js
+async function votePollRoute(context, req, res, pollId, voterId) {
+  const body = await readJsonBody(req);
+  const outcome = await runExclusive(context, castVoteTask, { pollId, option: body?.option, voterId });
+  if (outcome.result.ok) {
+    sendJson(res, 200, { poll: outcome.poll });
+  } else {
+    sendJson(res, VOTE_STATUS[outcome.result.reason], { error: outcome.result.reason });
+  }
+}
+```
+
+</details>
+
+### app/server.mjs:119 readJsonBody
+
+Reads the request body, enforces a 10 KB size limit, and parses it as JSON. An empty body counts as an empty object. A body that is too large or not valid JSON becomes an error with a status code.
+
+Signature: `async function readJsonBody(req)`
+
+<details>
+<summary>Source</summary>
+
+```js
+async function readJsonBody(req) {
+  const chunks = [];
+  let size = 0;
+  for await (const chunk of req) {
+    size += chunk.length;
+    if (size > BODY_LIMIT) throw Object.assign(new Error("body_too_large"), { status: 413, code: "body_too_large" });
+    chunks.push(chunk);
+  }
+  const text = Buffer.concat(chunks).toString("utf8");
+  if (text.length === 0) return {};
+  try {
+    return JSON.parse(text);
+  } catch {
+    throw Object.assign(new Error("bad_json"), { status: 400, code: "bad_json" });
+  }
+}
+```
+
+</details>
+
+### app/server.mjs:136 runExclusive
+
+Runs one data task after the task before it finishes, so two writes never overlap. It returns the result of the task, or its error.
+
+Signature: `function runExclusive(context, task, input)`
+
+<details>
+<summary>Source</summary>
+
+```js
+function runExclusive(context, task, input) {
+  const previous = context.queue;
+  let release;
+  context.queue = new Promise(function holdQueue(resolve) {
+    release = resolve;
+  });
+  return previous.then(function runTask() {
+    return task(context.dataFile, input);
+  }).finally(function releaseQueue() {
+    release();
+  });
+}
+```
+
+</details>
+
+### app/server.mjs:139 holdQueue
+
+Stores the release function for the current task, so the next queued task waits until this one finishes.
+
+Signature: `function holdQueue(resolve)`
+
+<details>
+<summary>Source</summary>
+
+```js
+function holdQueue(resolve) {
+    release = resolve;
+  }
+```
+
+</details>
+
+### app/server.mjs:142 runTask
+
+Runs the queued data task once the task before it has finished.
+
+Signature: `function runTask()`
+
+<details>
+<summary>Source</summary>
+
+```js
+function runTask() {
+    return task(context.dataFile, input);
+  }
+```
+
+</details>
+
+### app/server.mjs:144 releaseQueue
+
+Releases the queue after the task finishes, whether it succeeded or failed, so the next queued task can start.
+
+Signature: `function releaseQueue()`
+
+<details>
+<summary>Source</summary>
+
+```js
+function releaseQueue() {
+    release();
+  }
+```
+
+</details>
+
+### app/server.mjs:149 addPollTask
+
+Loads the poll list and returns the matching poll when the same submission arrived moments ago, so a double-click creates only one poll. Otherwise it adds the new poll, saves the list, and returns it. It runs inside the write queue.
+
+Signature: `async function addPollTask(dataFile, input)`
+
+<details>
+<summary>Source</summary>
+
+```js
+async function addPollTask(dataFile, input) {
+  const polls = await loadPolls(dataFile);
+  const duplicate = recentDuplicate(polls, input);
+  if (duplicate) return duplicate;
+  const poll = createPoll(polls, input);
+  await savePolls(dataFile, polls);
+  return poll;
+}
+```
+
+</details>
+
+### app/server.mjs:158 castVoteTask
+
+Loads the poll list, records the vote, and saves the list only when the vote counted. It returns the outcome and the updated poll as the voter sees it.
+
+Signature: `async function castVoteTask(dataFile, input)`
+
+<details>
+<summary>Source</summary>
+
+```js
+async function castVoteTask(dataFile, input) {
+  const polls = await loadPolls(dataFile);
+  const result = castVote(polls, input.pollId, input.option, input.voterId);
+  if (result.ok) await savePolls(dataFile, polls);
+  return { result, poll: result.ok ? publicPoll(findPoll(polls, input.pollId), input.voterId) : null };
+}
+```
+
+</details>
+
+### app/server.mjs:165 sendJson
+
+Sends a JSON response with the given status code and a correct content length.
+
+Signature: `function sendJson(res, status, payload)`
+
+<details>
+<summary>Source</summary>
+
+```js
+function sendJson(res, status, payload) {
+  const body = JSON.stringify(payload);
+  res.writeHead(status, {
+    "content-type": "application/json; charset=utf-8",
+    "content-length": Buffer.byteLength(body)
+  });
+  res.end(body);
+}
+```
+
+</details>
+
+### app/server.mjs:178 startFromEnvironment
+
+Reads PORT and DATA_FILE from the environment, starts the server, and stops it cleanly on SIGTERM or SIGINT.
+
+Signature: `function startFromEnvironment()`
+
+<details>
+<summary>Source</summary>
+
+```js
+function startFromEnvironment() {
+  const port = Number(process.env.PORT || 3000);
+  const dataFile = process.env.DATA_FILE || "data/polls.json";
+  const server = createServer({ dataFile });
+  function stopOnSignal() {
+    closeServer(server);
+  }
+  process.on("SIGTERM", stopOnSignal);
+  process.on("SIGINT", stopOnSignal);
+  server.listen(port, function announceListening() {
+    console.log(`listening on http://localhost:${server.address().port}`);
+  });
+}
+```
+
+</details>
+
+### app/server.mjs:182 stopOnSignal
+
+Closes the server when the process gets SIGTERM or SIGINT, so the process exits cleanly with code 0.
+
+Signature: `function stopOnSignal()`
+
+<details>
+<summary>Source</summary>
+
+```js
+function stopOnSignal() {
+    closeServer(server);
+  }
+```
+
+</details>
+
+### app/server.mjs:187 announceListening
+
+Prints the address the server listens on once the port is open.
+
+Signature: `function announceListening()`
+
+<details>
+<summary>Source</summary>
+
+```js
+function announceListening() {
+    console.log(`listening on http://localhost:${server.address().port}`);
+  }
+```
+
+</details>
+
+### app/store.mjs:11 loadPolls
+
+Reads the poll list from the JSON data file. A missing file counts as an empty list, and a file that does not hold a list is an error. Each poll is brought up to the current ballot format on the way in.
+
+Signature: `async function loadPolls(file)`
+
+<details>
+<summary>Source</summary>
+
+```js
+async function loadPolls(file) {
+  let text;
+  try {
+    text = await readFile(file, "utf8");
+  } catch (error) {
+    if (error.code === "ENOENT") return [];
+    throw error;
+  }
+  const polls = JSON.parse(text);
+  if (!Array.isArray(polls)) throw new Error(`${file} does not hold a list of polls`);
+  return polls.map(upgradeBallots);
+}
+```
+
+</details>
+
+### app/store.mjs:24 savePolls
+
+Writes the poll list to the data file. It writes a temporary file first and then renames it, so a crash cannot leave a half-written file.
+
+Signature: `async function savePolls(file, polls)`
+
+<details>
+<summary>Source</summary>
+
+```js
+async function savePolls(file, polls) {
+  await mkdir(dirname(file), { recursive: true });
+  const temp = `${file}.${process.pid}.${randomUUID()}.tmp`;
+  await writeFile(temp, `${JSON.stringify(polls, null, 2)}\n`);
+  await rename(temp, file);
+}
+```
+
+</details>
+
+### app/store.mjs:31 createPoll
+
+Checks the question and options, adds a new poll with zero votes and an empty ballot map to the list, and returns it. It throws a validation error when the input is not usable.
+
+Signature: `function createPoll(polls, input)`
+
+<details>
+<summary>Source</summary>
+
+```js
+function createPoll(polls, input) {
+  const poll = {
+    id: randomUUID(),
+    question: cleanText(input?.question, "question", QUESTION_MAX),
+    options: cleanOptions(input?.options).map(startTally),
+    ballots: {},
+    createdAt: new Date().toISOString()
+  };
+  polls.push(poll);
+  return poll;
+}
+```
+
+</details>
+
+### app/store.mjs:43 recentDuplicate
+
+Returns a poll from the last two seconds that has the same question and option labels as the input, or null when there is none. Invalid input has no duplicate, so createPoll still reports the validation error.
+
+Signature: `function recentDuplicate(polls, input)`
+
+<details>
+<summary>Source</summary>
+
+```js
+function recentDuplicate(polls, input) {
+  let question;
+  let labels;
+  try {
+    question = cleanText(input?.question, "question", QUESTION_MAX);
+    labels = cleanOptions(input?.options).map(lowerLabel);
+  } catch {
+    return null;
+  }
+  const cutoff = Date.now() - DUPLICATE_WINDOW_MS;
+  for (const poll of polls) {
+    if (Date.parse(poll.createdAt) < cutoff) continue;
+    if (poll.question !== question) continue;
+    if (poll.options.length !== labels.length) continue;
+    let same = true;
+    for (let index = 0; index < labels.length; index += 1) {
+      if (lowerLabel(poll.options[index].label) !== labels[index]) {
+        same = false;
+        break;
+      }
+    }
+    if (same) return poll;
+  }
+  return null;
+}
+```
+
+</details>
+
+### app/store.mjs:69 castVote
+
+Records one vote for an option in a poll. It refuses an unknown poll, an option that does not exist, and a second vote from the same voter. A counted vote goes into the ballot map, so the voter can see their own choice later.
+
+Signature: `function castVote(polls, pollId, optionIndex, voterId)`
+
+<details>
+<summary>Source</summary>
+
+```js
+function castVote(polls, pollId, optionIndex, voterId) {
+  const poll = findPoll(polls, pollId);
+  if (!poll) return { ok: false, reason: "not_found" };
+  if (!Number.isInteger(optionIndex) || optionIndex < 0 || optionIndex >= poll.options.length) {
+    return { ok: false, reason: "bad_option" };
+  }
+  if (Object.hasOwn(poll.ballots, voterId)) return { ok: false, reason: "already_voted" };
+  poll.options[optionIndex].votes += 1;
+  poll.ballots[voterId] = optionIndex;
+  return { ok: true };
+}
+```
+
+</details>
+
+### app/store.mjs:81 findPoll
+
+Returns the poll with the given id from the list, or null when no poll has that id.
+
+Signature: `function findPoll(polls, pollId)`
+
+<details>
+<summary>Source</summary>
+
+```js
+function findPoll(polls, pollId) {
+  for (const poll of polls) {
+    if (poll.id === pollId) return poll;
+  }
+  return null;
+}
+```
+
+</details>
+
+### app/store.mjs:88 listPolls
+
+Returns every poll in a form safe to send to the browser, without voter ids, with the newest poll first. Each poll says which option the given voter chose, or null when that voter has not chosen one or no voter is given.
+
+Signature: `function listPolls(polls, voterId)`
+
+<details>
+<summary>Source</summary>
+
+```js
+function listPolls(polls, voterId) {
+  return polls.toReversed().map(function viewFor(poll) {
+    return publicPoll(poll, voterId);
+  });
+}
+```
+
+</details>
+
+### app/store.mjs:89 viewFor
+
+Shapes one poll for the voter who asked for the list. listPolls applies it to every poll in the list.
+
+Signature: `function viewFor(poll)`
+
+<details>
+<summary>Source</summary>
+
+```js
+function viewFor(poll) {
+    return publicPoll(poll, voterId);
+  }
+```
+
+</details>
+
+### app/store.mjs:94 publicPoll
+
+Copies one poll into the public shape: id, question, option tallies, total votes, the choice of the given voter, and the creation time. The choice is null when no voter is given.
+
+Signature: `function publicPoll(poll, voterId)`
+
+<details>
+<summary>Source</summary>
+
+```js
+function publicPoll(poll, voterId) {
+  return {
+    id: poll.id,
+    question: poll.question,
+    options: poll.options.map(copyTally),
+    totalVotes: poll.options.reduce(addVotes, 0),
+    yourVote: ballotOf(poll, voterId),
+    createdAt: poll.createdAt
+  };
+}
+```
+
+</details>
+
+### app/store.mjs:105 cleanText
+
+Trims a text value and rejects it when it is missing, empty, not text, or longer than the limit.
+
+Signature: `function cleanText(value, label, max)`
+
+<details>
+<summary>Source</summary>
+
+```js
+function cleanText(value, label, max) {
+  if (typeof value !== "string") throw invalid(`${label} must be text`);
+  const text = value.trim();
+  if (text.length === 0) throw invalid(`${label} is required`);
+  if (text.length > max) throw invalid(`${label} must be ${max} characters or fewer`);
+  return text;
+}
+```
+
+</details>
+
+### app/store.mjs:113 cleanOptions
+
+Checks that the options are a list of two to ten valid option labels, and returns them cleaned. Two labels that match without regard to case or outer spaces are refused.
+
+Signature: `function cleanOptions(value)`
+
+<details>
+<summary>Source</summary>
+
+```js
+function cleanOptions(value) {
+  if (!Array.isArray(value)) throw invalid("options must be a list");
+  if (value.length < OPTIONS_MIN || value.length > OPTIONS_MAX) {
+    throw invalid(`options must have ${OPTIONS_MIN} to ${OPTIONS_MAX} entries`);
+  }
+  const options = value.map(cleanOption);
+  if (new Set(options.map(lowerLabel)).size < options.length) {
+    throw invalid("options must be different from each other");
+  }
+  return options;
+}
+```
+
+</details>
+
+### app/store.mjs:125 cleanOption
+
+Cleans one option label using the option length limit.
+
+Signature: `function cleanOption(value)`
+
+<details>
+<summary>Source</summary>
+
+```js
+function cleanOption(value) {
+  return cleanText(value, "option", OPTION_MAX);
+}
+```
+
+</details>
+
+### app/store.mjs:129 lowerLabel
+
+Makes an option label ready for the repeat check. Each run of spaces or tabs becomes one space, and letters become lowercase, so labels that read the same compare equal.
+
+Signature: `function lowerLabel(label)`
+
+<details>
+<summary>Source</summary>
+
+```js
+function lowerLabel(label) {
+  return label.replace(/\s+/g, " ").toLowerCase();
+}
+```
+
+</details>
+
+### app/store.mjs:133 startTally
+
+Turns one option label into a tally with zero votes.
+
+Signature: `function startTally(label)`
+
+<details>
+<summary>Source</summary>
+
+```js
+function startTally(label) {
+  return { label, votes: 0 };
+}
+```
+
+</details>
+
+### app/store.mjs:137 copyTally
+
+Copies one option tally so that callers cannot change the stored poll.
+
+Signature: `function copyTally(tally)`
+
+<details>
+<summary>Source</summary>
+
+```js
+function copyTally(tally) {
+  return { label: tally.label, votes: tally.votes };
+}
+```
+
+</details>
+
+### app/store.mjs:141 addVotes
+
+Adds the votes of one option to a running total. It counts all votes in a poll.
+
+Signature: `function addVotes(total, tally)`
+
+<details>
+<summary>Source</summary>
+
+```js
+function addVotes(total, tally) {
+  return total + tally.votes;
+}
+```
+
+</details>
+
+### app/store.mjs:145 upgradeBallots
+
+Gives a poll saved with the old voter list a ballot map. Each old voter gets an entry with a null choice, because the old format did not record which option they picked. A poll that already has a ballot map is returned unchanged.
+
+Signature: `function upgradeBallots(poll)`
+
+<details>
+<summary>Source</summary>
+
+```js
+function upgradeBallots(poll) {
+  if (poll.ballots) return poll;
+  const { voters = [], ...rest } = poll;
+  const ballots = {};
+  for (const voterId of voters) ballots[voterId] = null;
+  return { ...rest, ballots };
+}
+```
+
+</details>
+
+### app/store.mjs:153 ballotOf
+
+Returns the option index that one voter chose in a poll. It returns null when the voter has not voted, and also for an old voter whose choice was never recorded.
+
+Signature: `function ballotOf(poll, voterId)`
+
+<details>
+<summary>Source</summary>
+
+```js
+function ballotOf(poll, voterId) {
+  return Object.hasOwn(poll.ballots, voterId) ? poll.ballots[voterId] : null;
+}
+```
+
+</details>
+
+## poll-create-once.md: pass
+
+- Verdict: pass
+- Reason: passed
+- Evidence: [redacted copy](evidence/poll-create-once/), 25 text files, manifest sha256 6fdb1cac682af25e4f5fdd010a8942f0d7959e50dc5de0a410362e9c7c6ebd05
+- Not copied: screenshots and other binary files (13).
+
+Functions that ran in this flow, in file order:
+
+### app/server.mjs:20 createServer
+
+Creates the HTTP server for the poll app. Every request it receives goes to the request handler, which uses the given data file for storage.
+
+Signature: `function createServer({ dataFile })`
+
+<details>
+<summary>Source</summary>
+
+```js
+function createServer({ dataFile }) {
+  const context = { dataFile, queue: Promise.resolve() };
+  return createHttpServer(function handleRequest(req, res) {
+    serveRequest(context, req, res);
+  });
+}
+```
+
+</details>
+
+### app/server.mjs:22 handleRequest
+
+Hands each incoming request to serveRequest. The handler does not wait for it, because serveRequest sends the response itself.
+
+Signature: `function handleRequest(req, res)`
+
+<details>
+<summary>Source</summary>
+
+```js
+function handleRequest(req, res) {
+    serveRequest(context, req, res);
+  }
+```
+
+</details>
+
+### app/server.mjs:27 closeServer
+
+Stops accepting new connections, closes open ones, and exits the process with code 0 once the server has closed.
+
+Signature: `function closeServer(server)`
+
+<details>
+<summary>Source</summary>
+
+```js
+function closeServer(server) {
+  server.closeAllConnections();
+  server.close(function exitAfterClose() {
+    process.exit(0);
+  });
+}
+```
+
+</details>
+
+### app/server.mjs:29 exitAfterClose
+
+Exits the process with code 0 once the server has finished closing.
+
+Signature: `function exitAfterClose()`
+
+<details>
+<summary>Source</summary>
+
+```js
+function exitAfterClose() {
+    process.exit(0);
+  }
+```
+
+</details>
+
+### app/server.mjs:34 serveRequest
+
+Routes one request and turns any error into a response. Known errors send their own status code, and anything else becomes a 500 that the server logs.
+
+Signature: `async function serveRequest(context, req, res)`
+
+<details>
+<summary>Source</summary>
+
+```js
+async function serveRequest(context, req, res) {
+  try {
+    await routeRequest(context, req, res);
+  } catch (error) {
+    if (error.status) {
+      sendJson(res, error.status, { error: error.code });
+      return;
+    }
+    console.error(error);
+    if (res.headersSent) {
+      res.end();
+    } else {
+      sendJson(res, 500, { error: "server_error" });
+    }
+  }
+}
+```
+
+</details>
+
+### app/server.mjs:51 routeRequest
+
+Matches the request method and path to the right handler: the page, the poll list, creating a poll, or voting. The poll list and the vote route receive the browser voter id from its cookie. Unknown routes get a 404.
+
+Signature: `async function routeRequest(context, req, res)`
+
+<details>
+<summary>Source</summary>
+
+```js
+async function routeRequest(context, req, res) {
+  const url = new URL(req.url, "http://localhost");
+  const voterId = ensureVoter(req, res);
+  if (req.method === "GET" && STATIC_FILES.has(url.pathname)) {
+    return sendStatic(res, STATIC_FILES.get(url.pathname));
+  }
+  if (url.pathname === "/api/polls" && req.method === "GET") {
+    return sendPolls(context, res, voterId);
+  }
+  if (url.pathname === "/api/polls" && req.method === "POST") {
+    return addPollRoute(context, req, res);
+  }
+  const vote = VOTE_ROUTE.exec(url.pathname);
+  if (vote && req.method === "POST") {
+    return votePollRoute(context, req, res, vote[1], voterId);
+  }
+  return sendJson(res, 404, { error: "not_found" });
+}
+```
+
+</details>
+
+### app/server.mjs:70 ensureVoter
+
+Returns the voter id from the browser cookie. A browser without a valid cookie gets a new id, and the response sets the cookie.
+
+Signature: `function ensureVoter(req, res)`
+
+<details>
+<summary>Source</summary>
+
+```js
+function ensureVoter(req, res) {
+  const existing = readCookie(req.headers.cookie, VOTER_COOKIE);
+  if (existing && VOTER_ID.test(existing)) return existing;
+  const voterId = randomUUID();
+  res.setHeader("Set-Cookie", `${VOTER_COOKIE}=${voterId}; Path=/; HttpOnly; SameSite=Lax; Max-Age=31536000`);
+  return voterId;
+}
+```
+
+</details>
+
+### app/server.mjs:78 readCookie
+
+Finds one named value in a Cookie header and returns it, or null when the cookie is missing.
+
+Signature: `function readCookie(header, name)`
+
+<details>
+<summary>Source</summary>
+
+```js
+function readCookie(header, name) {
+  if (!header) return null;
+  for (const part of header.split(";")) {
+    const [key, ...value] = part.trim().split("=");
+    if (key === name) return value.join("=");
+  }
+  return null;
+}
+```
+
+</details>
+
+### app/server.mjs:87 sendStatic
+
+Sends one file from the public folder with its content type and a no-store cache header.
+
+Signature: `async function sendStatic(res, entry)`
+
+<details>
+<summary>Source</summary>
+
+```js
+async function sendStatic(res, entry) {
+  const body = await readFile(join(PUBLIC_DIR, entry.file));
+  res.writeHead(200, { "content-type": entry.type, "cache-control": "no-store" });
+  res.end(body);
+}
+```
+
+</details>
+
+### app/server.mjs:93 sendPolls
+
+Reads the poll list from the data file and sends it to the browser in the public shape. Only the browser that asks sees its own choice, marked as yourVote.
+
+Signature: `async function sendPolls(context, res, voterId)`
+
+<details>
+<summary>Source</summary>
+
+```js
+async function sendPolls(context, res, voterId) {
+  const polls = await loadPolls(context.dataFile);
+  sendJson(res, 200, { polls: listPolls(polls, voterId) });
+}
+```
+
+</details>
+
+### app/server.mjs:98 addPollRoute
+
+Reads the new poll from the request body and saves it. It answers 201 with the poll, or 400 with the validation message when the input is not usable.
+
+Signature: `async function addPollRoute(context, req, res)`
+
+<details>
+<summary>Source</summary>
+
+```js
+async function addPollRoute(context, req, res) {
+  const body = await readJsonBody(req);
+  try {
+    const poll = await runExclusive(context, addPollTask, body);
+    sendJson(res, 201, { poll: publicPoll(poll) });
+  } catch (error) {
+    if (error.name !== "ValidationError") throw error;
+    sendJson(res, 400, { error: error.message });
+  }
+}
+```
+
+</details>
+
+### app/server.mjs:119 readJsonBody
+
+Reads the request body, enforces a 10 KB size limit, and parses it as JSON. An empty body counts as an empty object. A body that is too large or not valid JSON becomes an error with a status code.
+
+Signature: `async function readJsonBody(req)`
+
+<details>
+<summary>Source</summary>
+
+```js
+async function readJsonBody(req) {
+  const chunks = [];
+  let size = 0;
+  for await (const chunk of req) {
+    size += chunk.length;
+    if (size > BODY_LIMIT) throw Object.assign(new Error("body_too_large"), { status: 413, code: "body_too_large" });
+    chunks.push(chunk);
+  }
+  const text = Buffer.concat(chunks).toString("utf8");
+  if (text.length === 0) return {};
+  try {
+    return JSON.parse(text);
+  } catch {
+    throw Object.assign(new Error("bad_json"), { status: 400, code: "bad_json" });
+  }
+}
+```
+
+</details>
+
+### app/server.mjs:136 runExclusive
+
+Runs one data task after the task before it finishes, so two writes never overlap. It returns the result of the task, or its error.
+
+Signature: `function runExclusive(context, task, input)`
+
+<details>
+<summary>Source</summary>
+
+```js
+function runExclusive(context, task, input) {
+  const previous = context.queue;
+  let release;
+  context.queue = new Promise(function holdQueue(resolve) {
+    release = resolve;
+  });
+  return previous.then(function runTask() {
+    return task(context.dataFile, input);
+  }).finally(function releaseQueue() {
+    release();
+  });
+}
+```
+
+</details>
+
+### app/server.mjs:139 holdQueue
+
+Stores the release function for the current task, so the next queued task waits until this one finishes.
+
+Signature: `function holdQueue(resolve)`
+
+<details>
+<summary>Source</summary>
+
+```js
+function holdQueue(resolve) {
+    release = resolve;
+  }
+```
+
+</details>
+
+### app/server.mjs:142 runTask
+
+Runs the queued data task once the task before it has finished.
+
+Signature: `function runTask()`
+
+<details>
+<summary>Source</summary>
+
+```js
+function runTask() {
+    return task(context.dataFile, input);
+  }
+```
+
+</details>
+
+### app/server.mjs:144 releaseQueue
+
+Releases the queue after the task finishes, whether it succeeded or failed, so the next queued task can start.
+
+Signature: `function releaseQueue()`
+
+<details>
+<summary>Source</summary>
+
+```js
+function releaseQueue() {
+    release();
+  }
+```
+
+</details>
+
+### app/server.mjs:149 addPollTask
+
+Loads the poll list and returns the matching poll when the same submission arrived moments ago, so a double-click creates only one poll. Otherwise it adds the new poll, saves the list, and returns it. It runs inside the write queue.
+
+Signature: `async function addPollTask(dataFile, input)`
+
+<details>
+<summary>Source</summary>
+
+```js
+async function addPollTask(dataFile, input) {
+  const polls = await loadPolls(dataFile);
+  const duplicate = recentDuplicate(polls, input);
+  if (duplicate) return duplicate;
+  const poll = createPoll(polls, input);
+  await savePolls(dataFile, polls);
+  return poll;
+}
+```
+
+</details>
+
+### app/server.mjs:165 sendJson
+
+Sends a JSON response with the given status code and a correct content length.
+
+Signature: `function sendJson(res, status, payload)`
+
+<details>
+<summary>Source</summary>
+
+```js
+function sendJson(res, status, payload) {
+  const body = JSON.stringify(payload);
+  res.writeHead(status, {
+    "content-type": "application/json; charset=utf-8",
+    "content-length": Buffer.byteLength(body)
+  });
+  res.end(body);
+}
+```
+
+</details>
+
+### app/server.mjs:178 startFromEnvironment
+
+Reads PORT and DATA_FILE from the environment, starts the server, and stops it cleanly on SIGTERM or SIGINT.
+
+Signature: `function startFromEnvironment()`
+
+<details>
+<summary>Source</summary>
+
+```js
+function startFromEnvironment() {
+  const port = Number(process.env.PORT || 3000);
+  const dataFile = process.env.DATA_FILE || "data/polls.json";
+  const server = createServer({ dataFile });
+  function stopOnSignal() {
+    closeServer(server);
+  }
+  process.on("SIGTERM", stopOnSignal);
+  process.on("SIGINT", stopOnSignal);
+  server.listen(port, function announceListening() {
+    console.log(`listening on http://localhost:${server.address().port}`);
+  });
+}
+```
+
+</details>
+
+### app/server.mjs:182 stopOnSignal
+
+Closes the server when the process gets SIGTERM or SIGINT, so the process exits cleanly with code 0.
+
+Signature: `function stopOnSignal()`
+
+<details>
+<summary>Source</summary>
+
+```js
+function stopOnSignal() {
+    closeServer(server);
+  }
+```
+
+</details>
+
+### app/server.mjs:187 announceListening
+
+Prints the address the server listens on once the port is open.
+
+Signature: `function announceListening()`
+
+<details>
+<summary>Source</summary>
+
+```js
+function announceListening() {
+    console.log(`listening on http://localhost:${server.address().port}`);
+  }
+```
+
+</details>
+
+### app/store.mjs:11 loadPolls
+
+Reads the poll list from the JSON data file. A missing file counts as an empty list, and a file that does not hold a list is an error. Each poll is brought up to the current ballot format on the way in.
+
+Signature: `async function loadPolls(file)`
+
+<details>
+<summary>Source</summary>
+
+```js
+async function loadPolls(file) {
+  let text;
+  try {
+    text = await readFile(file, "utf8");
+  } catch (error) {
+    if (error.code === "ENOENT") return [];
+    throw error;
+  }
+  const polls = JSON.parse(text);
+  if (!Array.isArray(polls)) throw new Error(`${file} does not hold a list of polls`);
+  return polls.map(upgradeBallots);
+}
+```
+
+</details>
+
+### app/store.mjs:24 savePolls
+
+Writes the poll list to the data file. It writes a temporary file first and then renames it, so a crash cannot leave a half-written file.
+
+Signature: `async function savePolls(file, polls)`
+
+<details>
+<summary>Source</summary>
+
+```js
+async function savePolls(file, polls) {
+  await mkdir(dirname(file), { recursive: true });
+  const temp = `${file}.${process.pid}.${randomUUID()}.tmp`;
+  await writeFile(temp, `${JSON.stringify(polls, null, 2)}\n`);
+  await rename(temp, file);
+}
+```
+
+</details>
+
+### app/store.mjs:31 createPoll
+
+Checks the question and options, adds a new poll with zero votes and an empty ballot map to the list, and returns it. It throws a validation error when the input is not usable.
+
+Signature: `function createPoll(polls, input)`
+
+<details>
+<summary>Source</summary>
+
+```js
+function createPoll(polls, input) {
+  const poll = {
+    id: randomUUID(),
+    question: cleanText(input?.question, "question", QUESTION_MAX),
+    options: cleanOptions(input?.options).map(startTally),
+    ballots: {},
+    createdAt: new Date().toISOString()
+  };
+  polls.push(poll);
+  return poll;
+}
+```
+
+</details>
+
+### app/store.mjs:43 recentDuplicate
+
+Returns a poll from the last two seconds that has the same question and option labels as the input, or null when there is none. Invalid input has no duplicate, so createPoll still reports the validation error.
+
+Signature: `function recentDuplicate(polls, input)`
+
+<details>
+<summary>Source</summary>
+
+```js
+function recentDuplicate(polls, input) {
+  let question;
+  let labels;
+  try {
+    question = cleanText(input?.question, "question", QUESTION_MAX);
+    labels = cleanOptions(input?.options).map(lowerLabel);
+  } catch {
+    return null;
+  }
+  const cutoff = Date.now() - DUPLICATE_WINDOW_MS;
+  for (const poll of polls) {
+    if (Date.parse(poll.createdAt) < cutoff) continue;
+    if (poll.question !== question) continue;
+    if (poll.options.length !== labels.length) continue;
+    let same = true;
+    for (let index = 0; index < labels.length; index += 1) {
+      if (lowerLabel(poll.options[index].label) !== labels[index]) {
+        same = false;
+        break;
+      }
+    }
+    if (same) return poll;
+  }
+  return null;
+}
+```
+
+</details>
+
+### app/store.mjs:88 listPolls
+
+Returns every poll in a form safe to send to the browser, without voter ids, with the newest poll first. Each poll says which option the given voter chose, or null when that voter has not chosen one or no voter is given.
+
+Signature: `function listPolls(polls, voterId)`
+
+<details>
+<summary>Source</summary>
+
+```js
+function listPolls(polls, voterId) {
+  return polls.toReversed().map(function viewFor(poll) {
+    return publicPoll(poll, voterId);
+  });
+}
+```
+
+</details>
+
+### app/store.mjs:89 viewFor
+
+Shapes one poll for the voter who asked for the list. listPolls applies it to every poll in the list.
+
+Signature: `function viewFor(poll)`
+
+<details>
+<summary>Source</summary>
+
+```js
+function viewFor(poll) {
+    return publicPoll(poll, voterId);
+  }
+```
+
+</details>
+
+### app/store.mjs:94 publicPoll
+
+Copies one poll into the public shape: id, question, option tallies, total votes, the choice of the given voter, and the creation time. The choice is null when no voter is given.
+
+Signature: `function publicPoll(poll, voterId)`
+
+<details>
+<summary>Source</summary>
+
+```js
+function publicPoll(poll, voterId) {
+  return {
+    id: poll.id,
+    question: poll.question,
+    options: poll.options.map(copyTally),
+    totalVotes: poll.options.reduce(addVotes, 0),
+    yourVote: ballotOf(poll, voterId),
+    createdAt: poll.createdAt
+  };
+}
+```
+
+</details>
+
+### app/store.mjs:105 cleanText
+
+Trims a text value and rejects it when it is missing, empty, not text, or longer than the limit.
+
+Signature: `function cleanText(value, label, max)`
+
+<details>
+<summary>Source</summary>
+
+```js
+function cleanText(value, label, max) {
+  if (typeof value !== "string") throw invalid(`${label} must be text`);
+  const text = value.trim();
+  if (text.length === 0) throw invalid(`${label} is required`);
+  if (text.length > max) throw invalid(`${label} must be ${max} characters or fewer`);
+  return text;
+}
+```
+
+</details>
+
+### app/store.mjs:113 cleanOptions
+
+Checks that the options are a list of two to ten valid option labels, and returns them cleaned. Two labels that match without regard to case or outer spaces are refused.
+
+Signature: `function cleanOptions(value)`
+
+<details>
+<summary>Source</summary>
+
+```js
+function cleanOptions(value) {
+  if (!Array.isArray(value)) throw invalid("options must be a list");
+  if (value.length < OPTIONS_MIN || value.length > OPTIONS_MAX) {
+    throw invalid(`options must have ${OPTIONS_MIN} to ${OPTIONS_MAX} entries`);
+  }
+  const options = value.map(cleanOption);
+  if (new Set(options.map(lowerLabel)).size < options.length) {
+    throw invalid("options must be different from each other");
+  }
+  return options;
+}
+```
+
+</details>
+
+### app/store.mjs:125 cleanOption
+
+Cleans one option label using the option length limit.
+
+Signature: `function cleanOption(value)`
+
+<details>
+<summary>Source</summary>
+
+```js
+function cleanOption(value) {
+  return cleanText(value, "option", OPTION_MAX);
+}
+```
+
+</details>
+
+### app/store.mjs:129 lowerLabel
+
+Makes an option label ready for the repeat check. Each run of spaces or tabs becomes one space, and letters become lowercase, so labels that read the same compare equal.
+
+Signature: `function lowerLabel(label)`
+
+<details>
+<summary>Source</summary>
+
+```js
+function lowerLabel(label) {
+  return label.replace(/\s+/g, " ").toLowerCase();
+}
+```
+
+</details>
+
+### app/store.mjs:133 startTally
+
+Turns one option label into a tally with zero votes.
+
+Signature: `function startTally(label)`
+
+<details>
+<summary>Source</summary>
+
+```js
+function startTally(label) {
+  return { label, votes: 0 };
+}
+```
+
+</details>
+
+### app/store.mjs:137 copyTally
+
+Copies one option tally so that callers cannot change the stored poll.
+
+Signature: `function copyTally(tally)`
+
+<details>
+<summary>Source</summary>
+
+```js
+function copyTally(tally) {
+  return { label: tally.label, votes: tally.votes };
+}
+```
+
+</details>
+
+### app/store.mjs:141 addVotes
+
+Adds the votes of one option to a running total. It counts all votes in a poll.
+
+Signature: `function addVotes(total, tally)`
+
+<details>
+<summary>Source</summary>
+
+```js
+function addVotes(total, tally) {
+  return total + tally.votes;
+}
+```
+
+</details>
+
+### app/store.mjs:145 upgradeBallots
+
+Gives a poll saved with the old voter list a ballot map. Each old voter gets an entry with a null choice, because the old format did not record which option they picked. A poll that already has a ballot map is returned unchanged.
+
+Signature: `function upgradeBallots(poll)`
+
+<details>
+<summary>Source</summary>
+
+```js
+function upgradeBallots(poll) {
+  if (poll.ballots) return poll;
+  const { voters = [], ...rest } = poll;
+  const ballots = {};
+  for (const voterId of voters) ballots[voterId] = null;
+  return { ...rest, ballots };
+}
+```
+
+</details>
+
+### app/store.mjs:153 ballotOf
+
+Returns the option index that one voter chose in a poll. It returns null when the voter has not voted, and also for an old voter whose choice was never recorded.
+
+Signature: `function ballotOf(poll, voterId)`
+
+<details>
+<summary>Source</summary>
+
+```js
+function ballotOf(poll, voterId) {
+  return Object.hasOwn(poll.ballots, voterId) ? poll.ballots[voterId] : null;
+}
+```
+
+</details>
+
+## Drift
+
+Drift check passed.
+
+| Location | Function | Status | Flows that ran it |
+| --- | --- | --- | --- |
+| app/server.mjs:20 | createServer | current | poll-create.md, poll-vote.md, poll-vote-once.md, poll-create-once.md |
+| app/server.mjs:22 | handleRequest | current | poll-create.md, poll-vote.md, poll-vote-once.md, poll-create-once.md |
+| app/server.mjs:27 | closeServer | current | poll-create.md, poll-vote.md, poll-vote-once.md, poll-create-once.md |
+| app/server.mjs:29 | exitAfterClose | current | poll-create.md, poll-vote.md, poll-vote-once.md, poll-create-once.md |
+| app/server.mjs:34 | serveRequest | current | poll-create.md, poll-vote.md, poll-vote-once.md, poll-create-once.md |
+| app/server.mjs:51 | routeRequest | current | poll-create.md, poll-vote.md, poll-vote-once.md, poll-create-once.md |
+| app/server.mjs:70 | ensureVoter | current | poll-create.md, poll-vote.md, poll-vote-once.md, poll-create-once.md |
+| app/server.mjs:78 | readCookie | current | poll-create.md, poll-vote.md, poll-vote-once.md, poll-create-once.md |
+| app/server.mjs:87 | sendStatic | current | poll-create.md, poll-vote.md, poll-vote-once.md, poll-create-once.md |
+| app/server.mjs:93 | sendPolls | current | poll-create.md, poll-vote.md, poll-vote-once.md, poll-create-once.md |
+| app/server.mjs:98 | addPollRoute | current | poll-create.md, poll-vote.md, poll-vote-once.md, poll-create-once.md |
+| app/server.mjs:109 | votePollRoute | current | poll-vote.md, poll-vote-once.md |
+| app/server.mjs:119 | readJsonBody | current | poll-create.md, poll-vote.md, poll-vote-once.md, poll-create-once.md |
+| app/server.mjs:136 | runExclusive | current | poll-create.md, poll-vote.md, poll-vote-once.md, poll-create-once.md |
+| app/server.mjs:139 | holdQueue | current | poll-create.md, poll-vote.md, poll-vote-once.md, poll-create-once.md |
+| app/server.mjs:142 | runTask | current | poll-create.md, poll-vote.md, poll-vote-once.md, poll-create-once.md |
+| app/server.mjs:144 | releaseQueue | current | poll-create.md, poll-vote.md, poll-vote-once.md, poll-create-once.md |
+| app/server.mjs:149 | addPollTask | current | poll-create.md, poll-vote.md, poll-vote-once.md, poll-create-once.md |
+| app/server.mjs:158 | castVoteTask | current | poll-vote.md, poll-vote-once.md |
+| app/server.mjs:165 | sendJson | current | poll-create.md, poll-vote.md, poll-vote-once.md, poll-create-once.md |
+| app/server.mjs:178 | startFromEnvironment | current | poll-create.md, poll-vote.md, poll-vote-once.md, poll-create-once.md |
+| app/server.mjs:182 | stopOnSignal | current | poll-create.md, poll-vote.md, poll-vote-once.md, poll-create-once.md |
+| app/server.mjs:187 | announceListening | current | poll-create.md, poll-vote.md, poll-vote-once.md, poll-create-once.md |
+| app/store.mjs:11 | loadPolls | current | poll-create.md, poll-vote.md, poll-vote-once.md, poll-create-once.md |
+| app/store.mjs:24 | savePolls | current | poll-create.md, poll-vote.md, poll-vote-once.md, poll-create-once.md |
+| app/store.mjs:31 | createPoll | current | poll-create.md, poll-vote.md, poll-vote-once.md, poll-create-once.md |
+| app/store.mjs:43 | recentDuplicate | current | poll-create.md, poll-vote.md, poll-vote-once.md, poll-create-once.md |
+| app/store.mjs:69 | castVote | current | poll-vote.md, poll-vote-once.md |
+| app/store.mjs:81 | findPoll | current | poll-vote.md, poll-vote-once.md |
+| app/store.mjs:88 | listPolls | current | poll-create.md, poll-vote.md, poll-vote-once.md, poll-create-once.md |
+| app/store.mjs:89 | viewFor | current | poll-create.md, poll-vote.md, poll-vote-once.md, poll-create-once.md |
+| app/store.mjs:94 | publicPoll | current | poll-create.md, poll-vote.md, poll-vote-once.md, poll-create-once.md |
+| app/store.mjs:105 | cleanText | current | poll-create.md, poll-vote.md, poll-vote-once.md, poll-create-once.md |
+| app/store.mjs:113 | cleanOptions | current | poll-create.md, poll-vote.md, poll-vote-once.md, poll-create-once.md |
+| app/store.mjs:125 | cleanOption | current | poll-create.md, poll-vote.md, poll-vote-once.md, poll-create-once.md |
+| app/store.mjs:129 | lowerLabel | current | poll-create.md, poll-vote.md, poll-vote-once.md, poll-create-once.md |
+| app/store.mjs:133 | startTally | current | poll-create.md, poll-vote.md, poll-vote-once.md, poll-create-once.md |
+| app/store.mjs:137 | copyTally | current | poll-create.md, poll-vote.md, poll-vote-once.md, poll-create-once.md |
+| app/store.mjs:141 | addVotes | current | poll-create.md, poll-vote.md, poll-vote-once.md, poll-create-once.md |
+| app/store.mjs:145 | upgradeBallots | current | poll-create.md, poll-vote.md, poll-vote-once.md, poll-create-once.md |
+| app/store.mjs:153 | ballotOf | current | poll-create.md, poll-vote.md, poll-vote-once.md, poll-create-once.md |
+| app/store.mjs:157 | invalid | current | poll-create.md |

@@ -1,0 +1,14 @@
+{
+  "kind": "analyze",
+  "status": "passed",
+  "summary": "analyze: the poll shows \"Blue (0)\".",
+  "duration_ms": 10234.9,
+  "url": "http://localhost:41269/",
+  "action_id": "efa25641-ee5a-484d-b9b4-492bae6d3862",
+  "analyze_action_ids": [
+    "8923fd92-8ba7-48ab-9c4b-d7f7c9f33318",
+    "efa25641-ee5a-484d-b9b4-492bae6d3862"
+  ],
+  "ordinal": 7,
+  "id": "0-7"
+}

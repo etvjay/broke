@@ -1,0 +1,33 @@
+evidence: '0.1'
+run_id: 3930d045-8653-4e23-b91b-4a4374621280
+status: finalized
+title: |
+  Open the start page of the poll app.
+  In the Question box, type: Double click once?
+  In the Options box, type Yes on one line and No on the next line.
+  Double-click the Create poll button once.
+  Wait until the poll list has updated.
+  Check that exactly one poll with the question "Double click once?" appears in the list. Fail if two or more appear.
+started: 2026-11-26T12:39:02.666Z
+environment:
+  producer:
+    name: kane-cli
+    version: 0.10.4
+  surfaces:
+    - http://localhost:33821
+  run_kind: author
+  origin: inline
+  pid: 232137
+  saved: false
+metrics_catalog:
+  id: kane-cli
+  version: 1
+  sha256: 9774e11a8a2240448d765bd4ad8eb1cf6c0444937e72050588b597539c890e77
+  source: bundled
+ended: 2026-11-26T12:40:04.163Z
+totals:
+  tests: 1
+  passed: 1
+  failed: 0
+  broken: 0
+  skipped: 0

@@ -1,0 +1,34 @@
+evidence: '0.1'
+run_id: f9961ec2-e4e8-4bb3-b0f6-7082d41fb8df
+status: finalized
+title: |
+  Open the start page of the poll app.
+  Create a poll: in the Question box, type Best tea?, and in the Options box, type Green on one line and Black on the next line. Then click Create poll.
+  Click the Vote button next to Green.
+  Check that the message "Vote counted." appears under the poll and that the poll shows "Green (1)".
+  In the same browser, click the Vote button next to Black.
+  Check that the message "You already voted on this poll." appears under the poll.
+  Check that the poll still shows "Black (0)", so the second vote did not count.
+started: 2026-11-26T12:26:26.794Z
+environment:
+  producer:
+    name: kane-cli
+    version: 0.10.4
+  surfaces:
+    - http://localhost:44795
+  run_kind: author
+  origin: inline
+  pid: 216882
+  saved: false
+metrics_catalog:
+  id: kane-cli
+  version: 1
+  sha256: 9774e11a8a2240448d765bd4ad8eb1cf6c0444937e72050588b597539c890e77
+  source: bundled
+ended: 2026-11-26T12:27:36.334Z
+totals:
+  tests: 1
+  passed: 1
+  failed: 0
+  broken: 0
+  skipped: 0

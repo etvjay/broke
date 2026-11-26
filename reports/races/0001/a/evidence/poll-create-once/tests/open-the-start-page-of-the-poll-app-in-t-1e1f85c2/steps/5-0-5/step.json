@@ -1,0 +1,16 @@
+{
+  "kind": "type",
+  "status": "passed",
+  "summary": "type: Typing Yes into Options box",
+  "duration_ms": 4550.6,
+  "url": "http://localhost:42895/",
+  "action_id": "58e10e07-9963-4f37-b04e-b6a97825e0fd",
+  "element_rect": {
+    "x": 666,
+    "y": 206,
+    "width": 588,
+    "height": 57
+  },
+  "ordinal": 5,
+  "id": "0-5"
+}

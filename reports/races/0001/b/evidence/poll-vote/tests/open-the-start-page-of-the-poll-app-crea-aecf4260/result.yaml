@@ -1,0 +1,96 @@
+evidence: '0.1'
+test: open-the-start-page-of-the-poll-app-crea-aecf4260
+status: passed
+duration_ms: 65108
+external_id:
+  session_id: 7dc9722e-c348-412d-9fbc-1291a17d34d7
+  commit_id: 7dc9722e-c348-412d-9fbc-1291a17d34d7
+  test_id: 58d819a5-6277-4244-a805-0d3532be6cfe
+  testcase_id: 01M8BX2942H7EJ0FFJFPH482Y3
+  project_id: 01M0HVQ571X8ARVW8V01B9FXH5
+  folder_id: 01M0J0NKJF28RDJD0J364SHW7G
+  org_id: '<account-id>'
+  user_name: <account>
+  user_email: <email>
+  sharable_link: https://test-manager.lambdatest.com/projects/01M0HVQ571X8ARVW8V01B9FXH5/test-cases/01M8BX2942H7EJ0FFJFPH482Y3/dashboard/share/<share-token>?type=summary&agentView=true&fqdn=summary-page
+  execution_id: 4159775f-fd19-4b41-b241-00bf8d2694e5
+environment:
+  model: v16-alpha
+  os: Linux
+  browser: Chrome
+  browser_version: '157'
+  resolution: 1920x1080
+  platform: Desktop
+  platform_type: web
+  os_version: 7.0.0-1011-aws
+steps:
+  - id: 0-1
+    ordinal: 1
+    status: passed
+    kind: navigate
+    duration_ms: 0
+    action_id: 0d8ccd27-4218-4edc-960c-6e660ea58786
+  - id: 0-2
+    ordinal: 2
+    status: passed
+    kind: type
+    duration_ms: 7600
+    action_id: 962dd3b4-2e72-4c7f-98eb-ae055eeb29c0
+  - id: 0-3
+    ordinal: 3
+    status: passed
+    kind: wait
+    duration_ms: 4900
+    action_id: 419551c1-3eba-4157-9052-ad364d78ce4f
+  - id: 0-4
+    ordinal: 4
+    status: passed
+    kind: type
+    duration_ms: 100
+    action_id: f9a1970a-8177-4915-b2b8-537f25f55311
+  - id: 0-5
+    ordinal: 5
+    status: passed
+    duration_ms: 300
+  - id: 0-6
+    ordinal: 6
+    status: passed
+    kind: click
+    duration_ms: 4900
+    action_id: 13e93f6b-5615-4051-93d4-da605ebd2345
+  - id: 0-7
+    ordinal: 7
+    status: passed
+    kind: analyze
+    duration_ms: 10200
+    action_id: efa25641-ee5a-484d-b9b4-492bae6d3862
+  - id: 0-8
+    ordinal: 8
+    status: passed
+    kind: assert
+    duration_ms: 0
+    action_id: 8222662f-5b11-4a95-9df0-844c254cf060
+  - id: 0-9
+    ordinal: 9
+    status: passed
+    kind: click
+    duration_ms: 4800
+    action_id: 0c620342-511c-4092-9c2e-23a534d0ec70
+  - id: 0-10
+    ordinal: 10
+    status: passed
+    kind: analyze
+    duration_ms: 10500
+    action_id: f45d42dd-3ff0-4d14-8e01-529c4e80f88f
+  - id: 0-11
+    ordinal: 11
+    status: passed
+    kind: assert
+    duration_ms: 0
+    action_id: 9c35e829-86df-4a46-8ca5-54e92fe6a70e
+  - id: 0-12
+    ordinal: 12
+    status: passed
+    kind: assert
+    duration_ms: 0
+    action_id: 9bc4c695-4081-41e2-b66e-4155b8b33c44
