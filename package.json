@@ -16,7 +16,8 @@
     "verify": "node scripts/verify.mjs",
     "race": "node scripts/race.mjs",
     "race:pick": "node scripts/race-pick.mjs",
-    "race:close": "node scripts/race-close.mjs"
+    "race:close": "node scripts/race-close.mjs",
+    "site": "node scripts/site.mjs"
   },
   "devDependencies": {
     "acorn": "^8.19.0"
