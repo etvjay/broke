@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 import { createServer as createHttpServer } from "node:http";
 import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { castVote, createPoll, findPoll, listPolls, loadPolls, publicPoll, savePolls } from "./store.mjs";
+import { castVote, createPoll, findPoll, findSubmission, listPolls, loadPolls, publicPoll, savePolls } from "./store.mjs";
 
 const PUBLIC_DIR = join(dirname(fileURLToPath(import.meta.url)), "public");
 const BODY_LIMIT = 10 * 1024;
@@ -98,8 +98,8 @@ async function sendPolls(context, res, voterId) {
 async function addPollRoute(context, req, res) {
   const body = await readJsonBody(req);
   try {
-    const poll = await runExclusive(context, addPollTask, body);
-    sendJson(res, 201, { poll: publicPoll(poll) });
+    const outcome = await runExclusive(context, addPollTask, body);
+    sendJson(res, outcome.created ? 201 : 200, { poll: publicPoll(outcome.poll) });
   } catch (error) {
     if (error.name !== "ValidationError") throw error;
     sendJson(res, 400, { error: error.message });
@@ -148,9 +148,11 @@ function runExclusive(context, task, input) {
 
 async function addPollTask(dataFile, input) {
   const polls = await loadPolls(dataFile);
+  const earlier = findSubmission(polls, input?.submissionId);
+  if (earlier) return { poll: earlier, created: false };
   const poll = createPoll(polls, input);
   await savePolls(dataFile, polls);
-  return poll;
+  return { poll, created: true };
 }
 
 async function castVoteTask(dataFile, input) {

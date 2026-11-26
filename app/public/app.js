@@ -1,7 +1,11 @@
 const pollList = document.getElementById("polls");
 const createForm = document.getElementById("create-form");
 const createStatus = document.getElementById("create-status");
+const createButton = createForm.querySelector("button[type=submit]");
 const voteMessages = new Map();
+// One id per filled-in form, so the server can tell a repeat send of the same poll from a new poll.
+let submissionId = newSubmissionId();
+let creating = false;
 
 async function loadPolls() {
   let body;
@@ -90,11 +94,12 @@ async function createPoll() {
     const response = await fetch("/api/polls", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ question, options })
+      body: JSON.stringify({ question, options, submissionId })
     });
     const body = await response.json();
     if (response.ok) {
       createForm.reset();
+      submissionId = newSubmissionId();
       createStatus.className = "status";
       createStatus.textContent = "Poll created.";
     } else {
@@ -108,9 +113,21 @@ async function createPoll() {
   }
 }
 
-createForm.addEventListener("submit", (event) => {
+function newSubmissionId() {
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}${Math.random().toString(36).slice(2)}`;
+}
+
+createForm.addEventListener("submit", async (event) => {
   event.preventDefault();
-  createPoll();
+  if (creating) return;
+  creating = true;
+  createButton.disabled = true;
+  try {
+    await createPoll();
+  } finally {
+    creating = false;
+    createButton.disabled = false;
+  }
 });
 
 loadPolls();
