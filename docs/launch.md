@@ -4,16 +4,20 @@ The owner posts these. The agent drafts them. Before posting, replace [REPO_URL]
 
 ## Post 1: short (X)
 
-I built Why It Broke for the KaneCLI hackathon.
+Kane CLI runs your app in a real browser, the way a user would. It returns a verdict with its evidence: a screenshot for each step, the network log, and a call on whether the app or the test is at fault.
 
-It is a small poll app. Kane CLI runs three browser flows after each change. When a flow fails, the report gives Kane's verdict and the app functions that ran during the flow, each with a plain explanation.
+For the KaneCLI hackathon I built Why It Broke. It uses Kane as the judge in a fix loop.
 
-Every verify run is a committed report. Eight so far, all passed, at 72 to 104 Kane credits each.
+After each change, Kane runs plain-English flows. An app fault that Kane names can start a fix race. A failure in the test stops the loop until I decide. Three Factory Droid agents race to fix it, and only a fix that passes Kane again can merge.
 
-The fix race is built and tested, but it has not run on a real red yet. When it does, I will say so.
+In a trial run, Kane caught a real bug: double-clicking Create poll made two identical polls. Kane's verdict said so at 0.98 confidence, and the network log shows two POST requests, both 201.
 
-Repo: [REPO_URL]
-Demo: [VIDEO_URL]
+The race is built and tested. It has not run on a committed failure yet.
+
+Kane CLI: https://www.testmuai.com/kane-cli
+Repo: https://github.com/etvjay/broke
+
+*Attach picture 05, then picture 04: Kane's evidence from the trial run. The 0.98 confidence and the two 201 requests come from that run's sealed evidence, which is not in reports/ yet.*
 
 ## Post 2: longer (X thread)
 
