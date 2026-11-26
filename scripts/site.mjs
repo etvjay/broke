@@ -94,6 +94,7 @@ export function renderSite(data) {
     '  <div class="page">',
     renderHeader(repoUrl),
     "    <main>",
+    renderHowItWorks(),
     renderLatestStatus(latest, repoUrl),
     renderLoopSection(loop),
     renderRedSection(red, repoUrl),
@@ -298,10 +299,16 @@ function buildLoopSteps({ red, race, green, repoUrl }) {
   const changeStep = red
     ? {
         name: "Change",
+        role: "An app commit triggers Kane CLI across all approved browser flows.",
         chip: "PASS",
         html: `Commit ${commitLink(repoUrl, red.testedCommit)} tested in ${reportLink(repoUrl, red.pad)}.`
       }
-    : { name: "Change", chip: "PENDING", html: "not yet." };
+    : {
+        name: "Change",
+        role: "An app commit triggers Kane CLI across all approved browser flows.",
+        chip: "PENDING",
+        html: "not yet."
+      };
 
   const families = red
     ? [...new Set(red.failingFlows.map((flow) => flow.verdict?.family ?? "not reported"))]
@@ -309,46 +316,80 @@ function buildLoopSteps({ red, race, green, repoUrl }) {
   const verdictStep = red
     ? {
         name: "Kane verdict",
+        role: "Kane decides whether the app or the test is at fault, with root cause and culprit step.",
         chip: "FAIL",
         html: `${escapeHtml(families.join(", "))} in ${escapeHtml(red.failingFlows.map((flow) => flow.name).join(", "))}.`
       }
-    : { name: "Kane verdict", chip: "PENDING", html: "not yet." };
+    : {
+        name: "Kane verdict",
+        role: "Kane decides whether the app or the test is at fault, with root cause and culprit step.",
+        chip: "PENDING",
+        html: "not yet."
+      };
 
   let raceStep;
   if (race) {
     raceStep = {
       name: "Race",
+      role: "Three coding agents try fixes in separate git worktrees; Kane verifies each attempt.",
       chip: race.status === "picked" ? "PASS" : "FAIL",
       html: `${raceLink(repoUrl, race.pad)} (${race.attempts.length} attempts recorded on main).`
     };
   } else {
-    raceStep = { name: "Race", chip: "PENDING", html: "not yet." };
+    raceStep = {
+      name: "Race",
+      role: "Three coding agents try fixes in separate git worktrees; Kane verifies each attempt.",
+      chip: "PENDING",
+      html: "not yet."
+    };
   }
 
   let pickStep;
   if (race?.pick) {
     pickStep = {
       name: "Pick",
+      role: "One green fix merges automatically; two or three wait for the owner's recorded pick.",
       chip: "PASS",
       html: `Attempt ${escapeHtml(race.pick.letter ?? "?")} merged. ${escapeHtml(race.pick.pickedByLine)}.`
     };
   } else if (race) {
-    pickStep = { name: "Pick", chip: "FAIL", html: "Not picked: no attempt passed." };
+    pickStep = {
+      name: "Pick",
+      role: "One green fix merges automatically; two or three wait for the owner's recorded pick.",
+      chip: "FAIL",
+      html: "Not picked: no attempt passed."
+    };
   } else {
-    pickStep = { name: "Pick", chip: "PENDING", html: "not yet." };
+    pickStep = {
+      name: "Pick",
+      role: "One green fix merges automatically; two or three wait for the owner's recorded pick.",
+      chip: "PENDING",
+      html: "not yet."
+    };
   }
 
   let greenStep;
   if (green) {
     greenStep = {
       name: "Green main",
+      role: "The merged commit must pass a full Kane verify rerun before main advances.",
       chip: green.outcome === "pass" ? "PASS" : "FAIL",
       html: `${reportLink(repoUrl, green.pad)} verified ${escapeHtml(green.outcome)} at merge ${commitLink(repoUrl, green.testedCommit)}.`
     };
   } else if (race && !race.pick) {
-    greenStep = { name: "Green main", chip: "FAIL", html: "Not reached." };
+    greenStep = {
+      name: "Green main",
+      role: "The merged commit must pass a full Kane verify rerun before main advances.",
+      chip: "FAIL",
+      html: "Not reached."
+    };
   } else {
-    greenStep = { name: "Green main", chip: "PENDING", html: "not yet." };
+    greenStep = {
+      name: "Green main",
+      role: "The merged commit must pass a full Kane verify rerun before main advances.",
+      chip: "PENDING",
+      html: "not yet."
+    };
   }
 
   return [changeStep, verdictStep, raceStep, pickStep, greenStep];
@@ -546,6 +587,29 @@ function renderHeader(repoUrl) {
   ].join("\n");
 }
 
+function renderHowItWorks() {
+  return [
+    '      <section id="what-it-does">',
+    "        <h2>What Why It Broke does</h2>",
+    "        <p>Why It Broke is a closed-loop verification and repair harness built around Kane CLI. A small poll app serves as the subject under test while Kane tests it in a real browser, attributes failures, and gates every fix before it can reach main.</p>",
+    '        <div class="pillars">',
+    '          <div class="pillar">',
+    "            <h3>Browser verdict</h3>",
+    "            <p>Each commit boots a fresh poll app and runs owner-approved plain-text flows in a real browser via Kane CLI, returning a root-cause verdict and redacted evidence.</p>",
+    "          </div>",
+    '          <div class="pillar">',
+    "            <h3>Explained code trace</h3>",
+    "            <p>Every app function carries a source-hashed explanation. Reports pair Kane's verdict with the exact functions that ran on the failing path and flag stale docs.</p>",
+    "          </div>",
+    '          <div class="pillar">',
+    "            <h3>Gated 3-agent fix race</h3>",
+    "            <p>When Kane blames the app, three coding agents each attempt a fix in isolated git worktrees. Kane verifies every attempt; only a fix that passes Kane again can merge.</p>",
+    "          </div>",
+    "        </div>",
+    "      </section>"
+  ].join("\n");
+}
+
 function renderLatestStatus(latest, repoUrl) {
   if (!latest) {
     return [
@@ -576,7 +640,7 @@ function renderLoopSection(loop) {
   const items = loop
     .map(
       (step, index) =>
-        `          <li><div class="loop-step-head"><span class="step-index">${index + 1}.</span> <strong>${escapeHtml(step.name)}</strong> ${renderChip(step.chip)}</div><div class="step-detail">${step.html}</div></li>`
+        `          <li><div class="loop-step-head"><span class="step-index">${index + 1}.</span> <strong>${escapeHtml(step.name)}</strong> ${renderChip(step.chip)}</div><div class="step-body"><span class="step-role">${escapeHtml(step.role)}</span> <span class="step-detail">${step.html}</span></div></li>`
     )
     .join("\n");
   return [
@@ -1047,6 +1111,26 @@ const STYLES = `
       background: var(--pending-bg);
       border-color: var(--pending-rule);
     }
+    .pillars {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 1.5rem;
+      margin-top: 1.25rem;
+      padding-top: 1.25rem;
+      border-top: 1px solid var(--rule-soft);
+    }
+    .pillar h3 {
+      margin: 0 0 0.4rem;
+      font-size: var(--text-body);
+      font-weight: 700;
+      color: var(--ink);
+    }
+    .pillar p {
+      margin: 0;
+      font-size: var(--text-sm);
+      color: var(--muted);
+      line-height: 1.55;
+    }
     .status-band {
       padding: 1rem 1.25rem;
       background: var(--surface);
@@ -1097,7 +1181,16 @@ const STYLES = `
       font-variant-numeric: tabular-nums;
       color: var(--muted);
     }
-    .step-detail { color: var(--muted); }
+    .step-body {
+      display: flex;
+      flex-direction: column;
+      gap: 0.2rem;
+    }
+    .step-role { color: var(--ink); }
+    .step-detail {
+      color: var(--muted);
+      font-size: var(--text-sm);
+    }
     .failure-titles {
       margin: 0.75rem 0 1rem;
       padding: 0.75rem 1rem 0.75rem 2rem;
@@ -1216,6 +1309,7 @@ const STYLES = `
     @media (max-width: 680px) {
       .page { padding: 1.5rem 1rem 3rem; }
       .masthead-bar { gap: 0.75rem; }
+      .pillars { grid-template-columns: 1fr; gap: 1rem; }
       .loop-list li { grid-template-columns: 1fr; gap: 0.25rem; }
       .verdict-grid > div { grid-template-columns: 1fr; gap: 0.15rem; }
     }
