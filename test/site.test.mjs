@@ -346,12 +346,14 @@ test("building site on this repo is byte-identical across runs and contains no s
   assert.doesNotMatch(html1, /\/home\//);
   assert.doesNotMatch(html1, /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/);
   assert.deepEqual(scanSecrets(html1), []);
-  for (let i = 1; i <= 8; i += 1) {
+  for (let i = 1; i <= 10; i += 1) {
     const pad = String(i).padStart(4, "0");
     assert.match(html1, new RegExp(`reports/${pad}\\.md`));
   }
-  assert.match(html1, /No red run yet\./);
-  assert.match(html1, /No race has reached main yet\./);
+  assert.match(html1, /reports\/races\/0001/);
+  assert.match(html1, /application_issue/);
+  assert.match(html1, /attempt a/);
+  assert.match(html1, /Picked by/);
 });
 
 function writeZip(zipPath, entries) {

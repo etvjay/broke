@@ -8,10 +8,11 @@ Built for the [KaneCLI Online Hackathon](https://www.kaneclihack.sh/) by TestMu 
 
 ## Status
 
-- Eight verify runs, 0001 to 0008, are committed. All eight are green.
-- The race has not run on a real red yet. It is built and tested with fake racers and a fake verify.
+- Ten verify runs, 0001 to 0010, are committed: 0001 to 0008 and 0010 are green, and 0009 is a real red on the fourth flow, `poll-create-once`.
+- In report [0009](reports/0009.md) (commit `b35d27f`), Kane caught a real bug: double-clicking Create poll created two identical polls instead of one. Kane's verdict was `application_issue` (`functional_defect`, `major`) at 0.98 confidence, with two `POST /api/polls -> 201` requests in the evidence.
+- Race [0001](reports/races/0001/) ran three Factory Droid racers (`a`, `b`, `c`) sequentially from report 0009 in isolated worktrees. All three passed all four Kane flows and drift (`a`: per-form `submissionId` idempotency key + client guard; `b`: global 2-second duplicate window; `c`: per-voter 2-second duplicate window).
+- The owner picked attempt `a` (`f74aeba`) via `npm run race:pick`. The merge (`cb8d7c4`) verified green across all four flows and drift in report [0010](reports/0010.md) (73.05 credits), and race 0001's records committed to main at `42410d6`.
 - Both updated race rules are live on main: a sole green fix merges automatically through the pick path, and a race with no green fix commits its records folder to main.
-- In a scratch run on 25 November, Kane caught a real bug. Double-clicking Create poll made two identical polls. Kane's verdict was `application_issue` at 0.98 confidence. The network log shows two POST requests, both 201. The scratch run is not a verify report, and its evidence pack is not in this repo. The bug is still in the app. The flow that checks for it, `poll-create-once`, waits for the owner's approval.
 - The race gate first checked for `app_bug`. Kane's verdicts use `application_issue`, so a real app fault would not have started a race. The gate now checks `application_issue` (commit `18cb453`). This was fixed before any red run.
 - Committed evidence is text only: network logs, console logs, and failure files. Verify does not copy screenshots into the repo. Kane keeps them in its evidence packs.
 - The static report page is live at [https://etvjay.github.io/broke/](https://etvjay.github.io/broke/), built from committed reports on main by GitHub Actions. Run the poll app locally with `npm start`, or read the raw reports on GitHub.
@@ -45,12 +46,12 @@ You do not need Kane to read the results. Every verify report is committed on ma
 
 ## The flows
 
-Each flow is plain text in `flows/`. Kane runs the text in a real browser against a fresh copy of the app. Verify runs the first three. The fourth waits for the owner's approval.
+Each flow is plain text in `flows/`. Kane runs the text in a real browser against a fresh copy of the app. All four flows are owner-approved and run in verify.
 
 - `poll-create` makes the poll "Lunch spot?" with two options. It checks that a poll with one option is refused.
 - `poll-vote` makes the poll "Favourite colour?" and votes Blue. It checks that the count reads Blue (1).
 - `poll-vote-once` makes the poll "Best tea?" and votes Green. It checks that a second vote from the same browser is refused.
-- `poll-create-once` (not in verify until the owner approves it) double-clicks Create poll once for "Double click once?" and fails if two or more polls with that question appear.
+- `poll-create-once` double-clicks Create poll once for "Double click once?" and fails if two or more polls with that question appear.
 
 ## Verify
 
@@ -87,8 +88,10 @@ The drift check fails when:
 | 0006 | 7c51865 | Options that differ only in spacing are refused | pass | 101.24 |
 | 0007 | 048d6cc | A poll list that cannot load shows a notice | pass | 75.83 |
 | 0008 | eced74a | Each poll shows its total votes | pass | 72.40 |
+| 0009 | b35d27f | Fourth flow `poll-create-once` enabled against double-click create bug | fail | 126.19 |
+| 0010 | cb8d7c4 | Merged race 0001 winner (attempt `a`, `submissionId` idempotency + client guard) | pass | 73.05 |
 
-Reports 0003 to 0008 each test an app change that the builder agent made, with a failing test or browser check written first. None was planted to fail. Reports 0006 to 0008 were the last three tries the owner allowed, and all three passed. No run has gone red, so the race has not run on a real red, and no pick has run. The race is tested with fake racers and a fake verify. One Droid racer has run once, on a one-line test change, through the same process code. The 20-minute limit and a racer's cost on a real fix are untested.
+Reports 0003 to 0008 each test an app change that the builder agent made, with a failing test or browser check written first. None was planted to fail. In report 0009, enabling the owner-approved `poll-create-once` flow caught the real double-click bug in the app (`application_issue`, 0.98 confidence). Race 0001 ran three real Factory Droid racers (`a`, `b`, `c`) from that red report; all three passed all four Kane flows and drift, the owner picked attempt `a`, and report 0010 confirmed the merged fix green on main.
 
 The Kane balance fell by 776.26 credits between the balance recorded after report 0001 and the one after report 0008. Kane's session records account for 695.39 of that: the 21 runs behind reports 0002 to 0008, plus three runs from one stray run that was never committed. The stray run cost 82.56 credits. That leaves 80.87 credits with no known cause.
 
