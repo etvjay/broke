@@ -136,7 +136,8 @@ test("a red app fault starts a race in the background and exits 0 with the owner
   assert.equal(r.code, 0, r.stderr);
   assert.match(r.stdout, /Verified red: report 0002/);
   assert.match(r.stdout, /A fix race started in the background/);
-  assert.match(r.stdout, /npm run race:pick -- NNNN <a\|b\|c>/);
+  assert.match(r.stdout, /one attempt.*runner merges it/i);
+  assert.match(r.stdout, /two or three.*npm run race:pick -- NNNN <a\|b\|c>/i);
   assert.equal(await waitForFile(marker), true);
   const started = JSON.parse(await readFile(marker, "utf8"));
   assert.equal(started.args[0], "--root");

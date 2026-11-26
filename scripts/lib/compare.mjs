@@ -5,7 +5,7 @@ export function renderComparison(attempts, { raceNumber, base, startReport = nul
   const lines = [`# Race ${padNumber(raceNumber)} comparison`, ""];
   if (startReport !== null) lines.push(startReport, "");
   lines.push(
-    `Each attempt started from ${base}. This comparison names no winner. The owner picks one attempt with npm run race:pick.`,
+    `Each attempt started from ${base}. This comparison names no winner. If one attempt is green, the runner merges it; if two or three are green, the owner picks one with npm run race:pick.`,
     "",
     "| Attempt | Branch | Commit | Status | Reason | Files | Lines | Explanations changed | Flows | Drift |",
     "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |"

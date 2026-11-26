@@ -53,9 +53,12 @@ export async function copyRecords(fromDir, toDir) {
   }
 }
 
-// One more than the highest race number, from race folders and race branches.
+// One more than the highest race number, from race folders, committed records, and race branches.
 export async function nextRaceNumber(root) {
   const numbers = (await listDir(racesDir())).filter((name) => /^\d{4}$/.test(name)).map(Number);
+  for (const name of await listDir(join(root, "reports", "races"))) {
+    if (/^\d{4}$/.test(name)) numbers.push(Number(name));
+  }
   const branches = (await git(root, ["branch", "--list", "race/*", "--format=%(refname:short)"])).split("\n");
   for (const branch of branches) {
     const match = /^race\/(\d{4})-/.exec(branch.trim());

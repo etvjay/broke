@@ -1,13 +1,13 @@
 import { after, test } from "node:test";
 import assert from "node:assert/strict";
-import { spawn } from "node:child_process";
+import { spawn, execFileSync } from "node:child_process";
 import { once } from "node:events";
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
 import { fileURLToPath } from "node:url";
-import { runProcess } from "../scripts/lib/race-support.mjs";
+import { nextRaceNumber, runProcess } from "../scripts/lib/race-support.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const RUN_RACER = join(HERE, "fixtures", "run-racer.mjs");
@@ -150,6 +150,22 @@ test("a timeout stops a racer that honors SIGTERM and reports timedOut", async (
   });
   assert.equal(result.timedOut, true);
   assert.equal(result.signal, "SIGTERM");
+});
+
+test("nextRaceNumber counts race folders committed under reports/races/", async () => {
+  const dir = await scratch();
+  const home = join(dir, "home");
+  const repo = join(dir, "repo");
+  await mkdir(home, { recursive: true });
+  await mkdir(join(repo, "reports", "races", "0005"), { recursive: true });
+  execFileSync("git", ["-C", repo, "init", "-q", "-b", "main"]);
+  const previousHome = process.env.HOME;
+  process.env.HOME = home;
+  try {
+    assert.equal(await nextRaceNumber(repo), 6);
+  } finally {
+    process.env.HOME = previousHome;
+  }
 });
 
 async function scratch() {

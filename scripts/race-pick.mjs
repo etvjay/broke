@@ -19,13 +19,18 @@ import {
 } from "./lib/race-support.mjs";
 
 // Merges the chosen attempt into main, but only if the merge verifies green.
+// Shared by the owner's race:pick and the runner's sole-green auto-merge.
 // Exit codes: 0 merged, main moved, lock released; 1 the merge verified red, so
 // main did not move and the lock stays; 2 refused, or an error.
-export async function runPick({ root = ROOT, number, letter, reason, verifyScript = VERIFY_SCRIPT, log = () => {} }) {
+export async function runPick({ root = ROOT, number, letter, reason, pickedBy = "owner", verifyScript = VERIFY_SCRIPT, log = () => {} }) {
   const raceNumber = Number(number);
   const n = padNumber(raceNumber);
   if (!LETTERS.includes(letter)) {
     log("refused: name the attempt as a, b, or c.");
+    return 2;
+  }
+  if (pickedBy !== "owner" && pickedBy !== "runner") {
+    log("refused: pickedBy must be owner or runner.");
     return 2;
   }
   if (typeof reason !== "string" || reason.trim() === "") {
@@ -67,15 +72,20 @@ export async function runPick({ root = ROOT, number, letter, reason, verifyScrip
       return 2;
     }
     const records = `reports/races/${n}`;
-    const note = pickNote({ n, letter, attemptBranch, attemptCommit, reason, mainBefore });
+    const pickedByLine =
+      pickedBy === "runner"
+        ? "Picked by: runner (the only attempt that passed Kane's verify)"
+        : "Picked by: owner";
+    const note = pickNote({ n, letter, attemptBranch, attemptCommit, reason, pickedBy, pickedByLine, mainBefore });
     await copyRecords(dir, join(scratch, records));
     await writeFile(join(scratch, records, "pick.md"), note);
     await git(scratch, ["add", "--", records]);
+    const reasonLabel = pickedBy === "runner" ? "Runner reason" : "Owner reason";
     await git(scratch, [
       "commit",
       "-q",
       "-m", `race ${n}: pick attempt ${letter}`,
-      "-m", `Owner reason: ${reason.trim()}`,
+      "-m", `${pickedByLine}\n${reasonLabel}: ${reason.trim()}`,
       "-m", COAUTHOR
     ]);
     // The merge is the commit verify tests. Verify then commits its report on top of it, as
@@ -112,11 +122,13 @@ export async function runPick({ root = ROOT, number, letter, reason, verifyScrip
   }
 }
 
-function pickNote({ n, letter, attemptBranch, attemptCommit, reason, mainBefore }) {
+function pickNote({ n, letter, attemptBranch, attemptCommit, reason, pickedBy, pickedByLine, mainBefore }) {
+  const actor = pickedBy === "runner" ? "runner" : "owner";
   return [
     `# Race ${n} pick`,
     "",
-    `The owner picked attempt ${letter} (${attemptBranch}, commit ${attemptCommit.slice(0, 7)}).`,
+    `The ${actor} picked attempt ${letter} (${attemptBranch}, commit ${attemptCommit.slice(0, 7)}).`,
+    pickedByLine,
     `Reason: ${reason.trim()}`,
     `Main was at ${mainBefore.slice(0, 7)} before the merge.`,
     ""

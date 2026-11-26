@@ -8,7 +8,7 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { runClose } from "../scripts/race-close.mjs";
 import { runPick } from "../scripts/race-pick.mjs";
-import { runRace } from "../scripts/race.mjs";
+import { commitRecordsToMain, runRace } from "../scripts/race.mjs";
 import { buildBrief } from "../scripts/lib/brief.mjs";
 import { explanationChanges, renderComparison } from "../scripts/lib/compare.mjs";
 import { acquireLock, lockPath, raceDir, readLock, releaseLock, stateDir } from "../scripts/lib/lock.mjs";
@@ -144,7 +144,7 @@ test("a second race is refused while the lock is held", async () => {
 
 test("a racer that makes no commit is failed and is not verified", async () => {
   const ctx = await setup();
-  const { code } = await startRace(ctx, { a: "green", b: "none", c: "red" });
+  const { code } = await startRace(ctx, { a: "green", b: "none", c: "green" });
   assert.equal(code, 0);
   const comparison = await readFile(join(raceDir(1), "comparison.md"), "utf8");
   assert.match(comparison, /\| b \| race\/0001-b \| none \| no commit \|/);
@@ -202,23 +202,83 @@ test("a linked node_modules does not make a racer's worktree look dirty", async 
   assert.equal(git(path, ["status", "--porcelain"]).trim(), "");
 });
 
-test("with no green attempt the lock is released, main stays put, and the reports go to a branch", async () => {
+test("with no green attempt the records commit to main, no code changes, and the lock is released", async () => {
   const ctx = await setup();
   const before = git(ctx.repo, ["rev-parse", "HEAD"]).trim();
+  const tested = git(ctx.repo, ["rev-parse", "HEAD^"]).trim();
   const { code, lines } = await startRace(ctx, { a: "red", b: "red", c: "none" });
   assert.equal(code, 1);
   assert.equal(await readLock(), null);
-  assert.equal(git(ctx.repo, ["rev-parse", "HEAD"]).trim(), before);
-  assert.match(lines.join("\n"), /No attempt is green/);
-  const shown = git(ctx.repo, ["show", "race/0001-report:reports/races/0001/comparison.md"]);
+  assert.equal(git(ctx.repo, ["rev-parse", "HEAD~1"]).trim(), before);
+  const changed = git(ctx.repo, ["diff", "--name-only", "HEAD~1", "HEAD"]).trim().split("\n");
+  assert.ok(changed.length > 0);
+  assert.ok(changed.every((file) => file.startsWith("reports/races/0001/")));
+  assert.match(lines.join("\n"), /No attempt is green\. Nothing merged\. The records are committed to main at [0-9a-f]+\. The lock is released\./);
+  const shown = git(ctx.repo, ["show", "HEAD:reports/races/0001/comparison.md"]);
   assert.match(shown, /# Race 0001 comparison/);
   assert.match(shown, /poll-vote\.md: application_issue/);
+  const attempts = JSON.parse(git(ctx.repo, ["show", "HEAD:reports/races/0001/attempts.json"]));
+  assert.equal(attempts.base, before);
+  assert.equal(attempts.tested, tested);
 });
 
-test("green attempts wait for a pick: main does not move and the comparison names no winner", async () => {
+test("a second race starts from the same red code after a failed race commits its records to main", async () => {
+  const ctx = await setup();
+  assert.equal((await startRace(ctx, { a: "red", b: "none", c: "none" })).code, 1);
+  const { code } = await startRace(ctx, { a: "red", b: "none", c: "none" });
+  assert.equal(code, 1);
+  const brief = git(ctx.repo, ["show", "HEAD:reports/races/0002/brief.md"]);
+  assert.match(brief, /race 0001, attempt a: red\./);
+});
+
+test("commitRecordsToMain refuses when reports/races/NNNN already exists", async () => {
+  const ctx = await setup();
+  await mkdir(join(ctx.repo, "reports", "races", "0001"), { recursive: true });
+  await writeFile(join(ctx.repo, "reports", "races", "0001", "comparison.md"), "existing\n");
+  git(ctx.repo, ["add", "-A"]);
+  git(ctx.repo, ["commit", "-q", "-m", "existing race folder"]);
+  const source = join(ctx.dir, "fake-records");
+  await mkdir(source, { recursive: true });
+  await writeFile(join(source, "comparison.md"), "new\n");
+  await assert.rejects(() => commitRecordsToMain({ root: ctx.repo, number: 1, dir: source }), /already exists/);
+});
+
+test("with exactly one green attempt the runner merges it automatically and writes Picked by: runner", async () => {
   const ctx = await setup();
   const before = git(ctx.repo, ["rev-parse", "HEAD"]).trim();
-  const { code } = await startRace(ctx, { a: "red", b: "green", c: "red" });
+  const { code } = await startRace(ctx, { a: "red", b: "green", c: "none" });
+  assert.equal(code, 0);
+  const head = git(ctx.repo, ["rev-parse", "HEAD"]).trim();
+  assert.notEqual(head, before);
+  assert.equal(await readLock(), null);
+  const merge = git(ctx.repo, ["rev-parse", "HEAD^^"]).trim();
+  assert.equal(git(ctx.repo, ["log", "-1", "--format=%P", merge]).trim().split(" ").length, 2);
+  const pickMd = git(ctx.repo, ["show", "HEAD:reports/races/0001/pick.md"]);
+  assert.match(pickMd, /^Picked by: runner \(the only attempt that passed Kane's verify\)$/m);
+  assert.match(git(ctx.repo, ["log", "-1", "--format=%B", merge]), /Picked by: runner \(the only attempt that passed Kane's verify\)/);
+  assert.equal(existsSync(join(ctx.dir, "why-it-broke-race-0001-b")), false);
+});
+
+test("with one green attempt whose merged code verifies red, main stays put and the lock stays awaiting-pick", async () => {
+  const ctx = await setup();
+  const before = git(ctx.repo, ["rev-parse", "HEAD"]).trim();
+  process.env.FAKE_PICK_VERIFY = "red";
+  try {
+    const { code } = await startRace(ctx, { a: "red", b: "green", c: "none" });
+    assert.equal(code, 1);
+  } finally {
+    delete process.env.FAKE_PICK_VERIFY;
+  }
+  assert.equal(git(ctx.repo, ["rev-parse", "HEAD"]).trim(), before);
+  assert.equal((await readLock()).state, "awaiting-pick");
+  assert.match(git(ctx.repo, ["show", "pick/0001-b:reports/races/0001/pick.md"]), /^Picked by: runner/m);
+  await releaseLock();
+});
+
+test("two green attempts wait for a pick: main does not move and the comparison names no winner", async () => {
+  const ctx = await setup();
+  const before = git(ctx.repo, ["rev-parse", "HEAD"]).trim();
+  const { code } = await startRace(ctx, { a: "green", b: "green", c: "red" });
   assert.equal(code, 0);
   assert.equal((await readLock()).state, "awaiting-pick");
   assert.equal(git(ctx.repo, ["rev-parse", "HEAD"]).trim(), before);
@@ -231,7 +291,7 @@ test("green attempts wait for a pick: main does not move and the comparison name
 test("a green race keeps its records on the report branch while it waits for a pick", async () => {
   const ctx = await setup();
   const before = git(ctx.repo, ["rev-parse", "HEAD"]).trim();
-  const { code } = await startRace(ctx, { a: "red", b: "green", c: "none" });
+  const { code } = await startRace(ctx, { a: "green", b: "green", c: "none" });
   assert.equal(code, 0);
   assert.equal(git(ctx.repo, ["rev-parse", "HEAD"]).trim(), before);
   assert.match(git(ctx.repo, ["show", "race/0001-report:reports/races/0001/comparison.md"]), /# Race 0001 comparison/);
@@ -241,7 +301,7 @@ test("a green race keeps its records on the report branch while it waits for a p
 
 test("race:close keeps the records of a green race that is closed without a pick", async () => {
   const ctx = await setup();
-  await startRace(ctx, { a: "green" });
+  await startRace(ctx, { a: "green", b: "green" });
   assert.equal(await runClose({ number: "0001", log: () => {} }), 0);
   assert.match(git(ctx.repo, ["show", "race/0001-report:reports/races/0001/comparison.md"]), /# Race 0001 comparison/);
 });
@@ -255,17 +315,17 @@ test("a red that is not an app fault does not start a race", async () => {
   assert.equal(existsSync(raceDir(1)), false);
 });
 
-test("a race starts only when HEAD is the red report commit", async () => {
+test("a race refuses when code changed after the red report", async () => {
   const ctx = await setup({ extraCommit: true });
   const { code, lines } = await startRace(ctx, { a: "green" });
   assert.equal(code, 2);
-  assert.match(lines.join("\n"), /not the commit of the latest report/);
+  assert.match(lines.join("\n"), /outside reports\/races|code changed|red report/i);
   assert.equal(await readLock(), null);
 });
 
 test("pick refuses a red attempt and leaves main and the lock alone", async () => {
   const ctx = await setup();
-  await startRace(ctx, { a: "red", b: "green", c: "none" });
+  await startRace(ctx, { a: "red", b: "green", c: "green" });
   const before = git(ctx.repo, ["rev-parse", "HEAD"]).trim();
   const lines = [];
   assert.equal(await pick(ctx, "a", "try the red one", lines), 2);
@@ -275,12 +335,12 @@ test("pick refuses a red attempt and leaves main and the lock alone", async () =
   await releaseLock();
 });
 
-test("pick of a green attempt merges into main, clears the lock, and keeps the branches", async () => {
+test("pick of a green attempt merges into main, writes Picked by: owner, clears the lock, and keeps the branches", async () => {
   const ctx = await setup();
-  await startRace(ctx, { a: "none", b: "green", c: "red" });
+  await startRace(ctx, { a: "green", b: "green", c: "red" });
   const before = git(ctx.repo, ["rev-parse", "HEAD"]).trim();
   const attemptCommit = git(ctx.repo, ["rev-parse", "race/0001-b"]).trim();
-  assert.equal(await pick(ctx, "b", "only green attempt"), 0);
+  assert.equal(await pick(ctx, "b", "cleaner fix"), 0);
   const head = git(ctx.repo, ["rev-parse", "HEAD"]).trim();
   assert.notEqual(head, before);
   // HEAD is the pick record, HEAD^ the report, and HEAD^^ the merge.
@@ -291,17 +351,20 @@ test("pick of a green attempt merges into main, clears the lock, and keeps the b
   assert.equal(existsSync(join(ctx.dir, "why-it-broke-race-0001-b")), false);
   assert.notEqual(git(ctx.repo, ["branch", "--list", "race/0001-b"]).trim(), "");
   assert.match(git(ctx.repo, ["show", "HEAD:reports/races/0001/comparison.md"]), /Race 0001 comparison/);
-  assert.match(git(ctx.repo, ["show", "HEAD:reports/races/0001/pick.md"]), /only green attempt/);
+  const pickMd = git(ctx.repo, ["show", "HEAD:reports/races/0001/pick.md"]);
+  assert.match(pickMd, /^Picked by: owner$/m);
+  assert.match(pickMd, /cleaner fix/);
+  assert.match(git(ctx.repo, ["log", "-1", "--format=%B", merge]), /Picked by: owner/);
   assert.match(git(ctx.repo, ["show", "HEAD:reports/races/0001/brief.md"]), /# Fix the app/);
   assert.match(git(ctx.repo, ["show", "HEAD:reports/races/0001/attempts.json"]), /"letter": "b"/);
-  assert.match(git(ctx.repo, ["show", "HEAD:reports/races/0001/pick.md"]), /The merged result verified green \(exit 0\)/);
+  assert.match(pickMd, /The merged result verified green \(exit 0\)/);
   assert.equal(git(ctx.repo, ["log", "-1", "--format=%s"]).trim(), "race 0001: record the pick result");
 });
 
 test("a pick commits the merged result's Kane report to main, tested at the merge commit", async () => {
   const ctx = await setup();
-  await startRace(ctx, { a: "none", b: "green", c: "red" });
-  assert.equal(await pick(ctx, "b", "only green attempt"), 0);
+  await startRace(ctx, { a: "green", b: "green", c: "red" });
+  assert.equal(await pick(ctx, "b", "cleaner fix"), 0);
   const merge = git(ctx.repo, ["rev-parse", "HEAD^^"]).trim();
   assert.match(git(ctx.repo, ["show", "HEAD:reports/0002.md"]), new RegExp(`^Tested commit: ${merge}$`, "m"));
   assert.match(git(ctx.repo, ["show", "HEAD:reports/0002.json"]), /"outcome": "pass"/);
@@ -310,7 +373,7 @@ test("a pick commits the merged result's Kane report to main, tested at the merg
 
 test("a pick whose merged result verifies red leaves main alone and keeps the lock", async () => {
   const ctx = await setup();
-  await startRace(ctx, { a: "green", b: "none", c: "none" });
+  await startRace(ctx, { a: "green", b: "green", c: "none" });
   const before = git(ctx.repo, ["rev-parse", "HEAD"]).trim();
   process.env.FAKE_PICK_VERIFY = "red";
   try {
@@ -329,7 +392,7 @@ test("a pick whose merged result verifies red leaves main alone and keeps the lo
 
 test("race:close clears a race waiting for a pick and refuses a race that is still open", async () => {
   const ctx = await setup();
-  await startRace(ctx, { a: "green" });
+  await startRace(ctx, { a: "green", b: "green" });
   assert.equal(await runClose({ number: "0001", log: () => {} }), 0);
   assert.equal(await readLock(), null);
   await acquireLock(2, "x".repeat(40));
@@ -347,7 +410,7 @@ async function writeStaleLock(raceId) {
 test("a race whose process has exited does not block the next race", async () => {
   const ctx = await setup();
   await writeStaleLock(5);
-  const { code, lines } = await startRace(ctx, { a: "green" });
+  const { code, lines } = await startRace(ctx, { a: "green", b: "green" });
   assert.equal(code, 0);
   assert.match(lines.join("\n"), /stopped before it finished/);
   assert.equal((await readLock()).raceId, 1);
@@ -425,6 +488,8 @@ test("the comparison shows each attempt's status and names no winner", () => {
   assert.match(text, /\| b \| race\/0001-b \| none \| no commit \|/);
   assert.doesNotMatch(text, /winner\s*[:=-]/i);
   assert.match(text, /names no winner/);
+  assert.match(text, /one attempt is green, the runner merges it/i);
+  assert.match(text, /two or three.*npm run race:pick/i);
 });
 
 test("explanationChanges counts changed, added, and removed entries", () => {

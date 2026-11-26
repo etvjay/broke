@@ -77,7 +77,7 @@ export async function runStopHook(input, { verifyScript = VERIFY_SCRIPT, raceScr
     [
       `Verified red: report ${pad}. ${decision.reason}`,
       `A fix race started in the background. Its log: ${log}`,
-      'The owner picks one attempt with: npm run race:pick -- NNNN <a|b|c> --reason "<text>"'
+      'If one attempt passes, the runner merges it. If two or three pass, the owner picks one with: npm run race:pick -- NNNN <a|b|c> --reason "<text>"'
     ].join("\n")
   );
   return 0;

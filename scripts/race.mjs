@@ -13,6 +13,7 @@ import {
   addWorktree,
   branchName,
   copyRecords,
+  exists,
   LETTERS,
   listDir,
   nextRaceNumber,
@@ -23,6 +24,7 @@ import {
   worktreePath
 } from "./lib/race-support.mjs";
 import { classifyRed } from "./lib/summary.mjs";
+import { runPick } from "./race-pick.mjs";
 
 // Starts a fix race from a red report. Three Droid racers fix the app, one after
 // another, each in its own worktree. Each attempt is verified before the next racer
@@ -68,7 +70,10 @@ export async function runRace({
   try {
     await mkdir(dir, { recursive: true });
     const attempts = await runAttempts({ root, number, start, droidBin, verifyScript, racerTimeoutMs, log });
-    await writeFile(join(dir, "attempts.json"), `${JSON.stringify({ number, base: start.head, attempts }, null, 2)}\n`);
+    await writeFile(
+      join(dir, "attempts.json"),
+      `${JSON.stringify({ number, base: start.head, tested: start.tested, attempts }, null, 2)}\n`
+    );
     await writeFile(
       join(dir, "comparison.md"),
       renderComparison(attempts, {
@@ -78,16 +83,31 @@ export async function runRace({
       })
     );
     for (const attempt of attempts) log(`attempt ${attempt.letter}: ${attempt.status}. ${attempt.reason}`);
-    if (attempts.some((attempt) => attempt.status === "green")) {
+    const green = attempts.filter((attempt) => attempt.status === "green");
+    if (green.length === 1) {
       await keepRecords({ root, number, dir });
       await setLockState("awaiting-pick");
-      log(`race ${n}: at least one attempt is green. Compare them in ${join(dir, "comparison.md")}.`);
+      log(`race ${n}: attempt ${green[0].letter} is the only green attempt. Merging it through the pick path.`);
+      return await runPick({
+        root,
+        number,
+        letter: green[0].letter,
+        reason: "the only attempt that passed Kane's verify",
+        pickedBy: "runner",
+        verifyScript,
+        log
+      });
+    }
+    if (green.length > 1) {
+      await keepRecords({ root, number, dir });
+      await setLockState("awaiting-pick");
+      log(`race ${n}: ${green.length} attempts are green. Compare them in ${join(dir, "comparison.md")}.`);
       log(`The owner picks one: npm run race:pick -- ${n} <a|b|c> --reason "<text>"`);
       return 0;
     }
-    await keepRecords({ root, number, dir });
+    const sha = await commitRecordsToMain({ root, number, dir });
     await releaseLock();
-    log(`race ${n}: No attempt is green. Nothing merged, and main stays at ${start.head.slice(0, 7)}. The records are on ${reportBranchName(number)}. The lock is released.`);
+    log(`race ${n}: No attempt is green. Nothing merged. The records are committed to main at ${sha}. The lock is released.`);
     return 1;
   } catch (error) {
     log(`race ${n} stopped: ${error.message}`);
@@ -96,7 +116,8 @@ export async function runRace({
   }
 }
 
-// The red HEAD must be the commit verify made for the latest report, on top of the commit it tested.
+// A race starts from the latest red report when the code at HEAD matches the code at that report
+// outside reports/races/, and the report's tested commit is the commit before the report.
 async function startingRed(root, log) {
   const names = await listDir(join(root, "reports"));
   const numbers = names
@@ -111,8 +132,13 @@ async function startingRed(root, log) {
   const pad = padNumber(number);
   const head = (await git(root, ["rev-parse", "HEAD"])).trim();
   const reported = (await git(root, ["log", "-1", "--format=%H", "--", `reports/${pad}.md`])).trim();
-  if (reported !== head) {
-    log(`refused: HEAD is not the commit of the latest report (${pad}). A race starts only from the red HEAD that verify just reported.`);
+  if (reported === "" || !(await isAncestor(root, reported, head))) {
+    log(`refused: the commit of the latest report (${pad}) is not an ancestor of HEAD.`);
+    return null;
+  }
+  const changedOutside = (await git(root, ["diff", "--name-only", reported, head, "--", ":(exclude)reports/races"])).trim();
+  if (changedOutside !== "") {
+    log(`refused: changes outside reports/races/ were committed after report ${pad}. A race starts only from the red code that verify reported.`);
     return null;
   }
   const summary = await readJsonOrNull(join(root, "reports", `${pad}.json`));
@@ -120,11 +146,11 @@ async function startingRed(root, log) {
     log(`refused: report ${pad} has no summary file, so its verdicts cannot be read.`);
     return null;
   }
-  if (summary.testedCommit !== (await parentOf(root, head))) {
-    log(`refused: report ${pad} tested ${summary.testedCommit}, which is not the commit before HEAD.`);
+  if (summary.testedCommit !== (await parentOf(root, reported))) {
+    log(`refused: report ${pad} tested ${summary.testedCommit}, which is not the commit before report ${pad}.`);
     return null;
   }
-  return { number, head, summary };
+  return { number, head, tested: summary.testedCommit, summary };
 }
 
 async function runAttempts({ root, number, start, droidBin, verifyScript, racerTimeoutMs, log }) {
@@ -132,7 +158,7 @@ async function runAttempts({ root, number, start, droidBin, verifyScript, racerT
   const report = await readFile(join(root, "reports", `${padNumber(start.number)}.md`), "utf8");
   await writeFile(
     join(dir, "brief.md"),
-    buildBrief({ head: start.head, summary: start.summary, report, priorAttempts: await earlierAttempts(start.head) })
+    buildBrief({ head: start.head, summary: start.summary, report, priorAttempts: await earlierAttempts(start.tested) })
   );
   for (const letter of LETTERS) {
     await addWorktree({ root, path: worktreePath(root, number, letter), branch: branchName(number, letter), start: start.head });
@@ -154,12 +180,12 @@ async function runAttempts({ root, number, start, droidBin, verifyScript, racerT
   return attempts;
 }
 
-// Earlier attempts on this same commit, so a new brief lists what already failed.
-async function earlierAttempts(head) {
+// Earlier attempts on this same red tested commit, so a new brief lists what already failed.
+async function earlierAttempts(tested) {
   const lines = [];
   for (const name of await listDir(racesDir())) {
     const record = await readJsonOrNull(join(racesDir(), name, "attempts.json"));
-    if (record === null || record.base !== head) continue;
+    if (record === null || record.tested !== tested) continue;
     for (const attempt of record.attempts) {
       const failures = failuresOf(attempt);
       lines.push(`race ${name}, attempt ${attempt.letter}: ${attempt.status}. ${failures.length > 0 ? failures.join("; ") : attempt.reason}`);
@@ -224,7 +250,21 @@ async function evaluateAttempt({ root, number, letter, base, racer, verifyScript
   return judged(attempt, "error", `${errored.length > 0 ? `${errored.join(", ")} errored` : "verify errored"}.`);
 }
 
-// The records go on a branch of their own, so main does not move. A race keeps them when it ends with a green attempt waiting for a pick, and when no attempt is green.
+// Commits a failed race's records folder to main, without changing any code or merging any racer branch.
+export async function commitRecordsToMain({ root, number, dir }) {
+  const branch = (await git(root, ["rev-parse", "--abbrev-ref", "HEAD"])).trim();
+  if (branch !== "main") throw new Error(`refused: HEAD is on ${branch}, not main`);
+  const recordsRel = `reports/races/${padNumber(number)}`;
+  if (await exists(join(root, recordsRel))) {
+    throw new Error(`refused: ${recordsRel} already exists`);
+  }
+  await copyRecords(dir, join(root, recordsRel));
+  await git(root, ["add", "--", recordsRel]);
+  await git(root, ["commit", "-q", "-m", `race ${padNumber(number)}: no attempt is green`, "-m", COAUTHOR]);
+  return (await git(root, ["rev-parse", "--short", "HEAD"])).trim();
+}
+
+// The records go on a branch of their own while a green race waits for a pick, so main does not move.
 async function keepRecords({ root, number, dir }) {
   const branch = reportBranchName(number);
   const scratch = await mkdtemp(join(tmpdir(), "why-it-broke-records-"));
@@ -233,7 +273,7 @@ async function keepRecords({ root, number, dir }) {
     const recordsRel = `reports/races/${padNumber(number)}`;
     await copyRecords(dir, join(scratch, recordsRel));
     await git(scratch, ["add", "--", recordsRel]);
-    await git(scratch, ["commit", "-q", "-m", `race ${padNumber(number)}: no attempt is green`, "-m", COAUTHOR]);
+    await git(scratch, ["commit", "-q", "-m", `race ${padNumber(number)}: records awaiting pick`, "-m", COAUTHOR]);
   } finally {
     await removeWorktree(root, scratch);
   }
@@ -266,6 +306,15 @@ async function explanationsAt(root, rev) {
     return JSON.parse(await git(root, ["show", `${rev}:explain/functions.json`]));
   } catch {
     return [];
+  }
+}
+
+async function isAncestor(root, ancestor, descendant) {
+  try {
+    await git(root, ["merge-base", "--is-ancestor", ancestor, descendant]);
+    return true;
+  } catch {
+    return false;
   }
 }
 
