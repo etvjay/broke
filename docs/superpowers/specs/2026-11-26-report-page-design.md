@@ -1,7 +1,7 @@
 # Why It Broke: Report Page Design
 
 **Date:** 2026-11-26
-**Status:** Approved by the owner on 26 Nov, which chose to show failed races. Version 4 (this version) says how, including the race rule changes in "Failed races". The other agent builds from `docs/superpowers/plans/2026-11-26-report-page.md`. Nothing is built yet.
+**Status:** Approved by the owner on 26 Nov, which chose to show failed races. Version 5 (this version) says how, including the race rule changes in "Failed races". The sole-green auto-merge is in "Sole green attempt". The page builder builds from `docs/superpowers/plans/2026-11-26-report-page.md` and does not push. Nothing is built yet.
 
 ## Intent
 
@@ -34,14 +34,15 @@ Look, chosen: Report.
 - Layout: one story page.
 - Look: Report.
 - Screenshots: the red run's failing step, and the same step in the green run after the pick. Two images in all, one per run. Other runs are text only. The owner checks each image before it is committed.
-- Race: a race appears on the page once its records reach main. That happens after a pick, or when no attempt passed. A race still waiting for a pick does not appear.
+- Race: a race appears on the page once its records reach main. That happens after a pick (the owner's, or the runner's when exactly one attempt is green), or when no attempt passed. A race still waiting for the owner's pick does not appear.
+- Sole green attempt: when exactly one attempt is green, the runner merges it, with no owner command. See "Sole green attempt".
 - Failed races (no green attempt): shown. See "Failed races" for how.
 - Hosting: GitHub Pages, built and deployed by the other agent. This amends the 22 Nov spec's non-goal "no hosted service" for this static page only.
 - Approved for the other agent: changes under `scripts/`, `test/`, `.github/`, `.gitignore`, and `package.json`. GitHub Pages enabled with the GitHub Actions source, which makes the page public.
 
 ## Failed races (no green attempt)
 
-The 22 Nov spec (Fix race, step 8) says that when no attempt is green, nothing merges and main stays at its red HEAD. Showing failed races changes that rule in two ways:
+The 22 Nov spec (Fix race, step 8) first said that when no attempt is green, nothing merges and main stays at its red HEAD. Its step 8 now follows this section. Showing failed races changes that rule in two ways:
 
 1. **Main moves by one records commit.** When no attempt is green, the race copies its folder to `reports/races/NNNN/` on the checked-out branch, which must be main. It commits the folder as `race NNNN: no attempt is green`, with the repo's co-author trailer. The commit adds only that folder. It changes no file under `app/`, `explain/`, or `flows/`, and merges no racer branch. Racer branches and worktrees stay local, as now. The owner pushes the commit, as with any commit.
 2. **The next race can still start from the same red code.** A race starts from the latest red report when the code at HEAD matches the code at that report, outside `reports/races/`, and the report's tested commit is the commit before the report. The spec's rerun path still works: the owner runs `npm run race` again on the same red code. A code change after the red report makes the race refuse, as before.
@@ -55,6 +56,17 @@ A race with a green attempt keeps its records on a local branch until the pick, 
 
 Cost if wrong: main gains one commit per failed race. Anyone who expects main to equal the red commit will see extra history. The start rule is the riskiest change, so tests must show that a race refuses after a code change.
 
+## Sole green attempt (26 Nov)
+
+When exactly one attempt is green, the runner picks it. The owner chose this rule on 26 Nov.
+
+1. The runner merges that attempt through the same path as `npm run race:pick`: the merge, the copied records, `pick.md`, a verify of the merged code, and a fast-forward of main only if that verify is green. The owner runs nothing.
+2. `pick.md` says who picked. A runner's pick has the line `Picked by: runner (the only attempt that passed Kane's verify)`. An owner's pick has the line `Picked by: owner`. The page shows that line. A `pick.md` without it shows "Picked by: not recorded".
+3. With two or three green attempts, nothing is picked automatically. The race waits for the owner's `npm run race:pick`.
+4. If the merged code verifies red, main does not move, and the race keeps its lock, as with an owner's pick. The race stays off the page, because its records do not reach main. The owner then clears the lock with `npm run race:close -- NNNN`.
+
+Cost if wrong: a sole green attempt reaches main without a human look. Main moves only if the merged code verifies green, the same test an owner's pick needs.
+
 ## Closed races (decided 26 Nov)
 
 A green race that the owner closes with `npm run race:close -- NNNN` stays off the page. Its records stay on its local branch. The owner chose this, because the decision to show failed races does not cover closed races.
@@ -63,7 +75,7 @@ A green race that the owner closes with `npm run race:close -- NNNN` stays off t
 
 - **Red run:** the newest report that has a failing flow. Older red runs stay in the all-runs table, with their verdicts and races.
 - **Race for a red run:** the folder `reports/races/NNNN/` on main whose `comparison.md` says "The red report is MMMM.", where MMMM is the red run. NNNN is the race's own number, not a report number. If several races name the red run, the story uses the newest one.
-- **Picked race:** the folder has `pick.md`. **Failed race:** it has none.
+- **Picked race:** the folder has `pick.md`. **Failed race:** it has none. **Who picked:** the `Picked by:` line of `pick.md`. A pick without that line shows "Picked by: not recorded".
 - **Green run after the pick:** the report on main whose tested commit is the pick's merge commit. That merge has two parents: main before the pick, and the picked attempt's commit. `pick.md` gives both as short SHAs ("Main was at ..." and "commit ..."). If no report matches, the page says so. It does not guess.
 - **Attempt commits:** the picked attempt's commit is on main, so it links on GitHub. Other attempts' commits exist only on the owner's machine, so the page shows them as text.
 - **Loop steps:** Change (the red run's tested commit), Kane verdict (the failing flow's family), Race (a race folder on main names this red run), Pick (`pick.md` is on main), Green main (the green run above). For a failed race, Pick says "Not picked: no attempt passed." and Green main says "Not reached." A step without data says "not yet."
@@ -104,7 +116,7 @@ A green race that the owner closes with `npm run race:close -- NNNN` stays off t
 2. **Latest status.** The newest report: its tested commit and its three flow results.
 3. **The loop.** Five steps in order: Change, Kane verdict, Race, Pick, Green main. Each shows its state from the files.
 4. **The red run.** The flow name and the failure title. For failing flows, Kane's verdict fields: family, category, root cause, suggestion, fault assessment (only when Kane gives one), confidence, and culprit step. Then the functions that ran, in file order, each with its explanation and its source in a collapsed block. Then the red run's featured screenshot.
-5. **The race.** Shown once its records are on main. For each attempt: letter, commit, status and reason, verdict per flow, drift result, and lines changed. A picked race then shows the pick and its reason. A failed race says "No attempt passed. No code was merged." Before any race reaches main, this section shows its empty state.
+5. **The race.** Shown once its records are on main. For each attempt: letter, commit, status and reason, verdict per flow, drift result, and lines changed. A picked race then shows the pick, who made it (the `Picked by:` line), and its reason. A failed race says "No attempt passed. No code was merged." Before any race reaches main, this section shows its empty state.
 6. **The green run after the pick.** The verify report on main, its flow results, and the green run's featured screenshot.
 7. **All runs.** One row per report: number, tested commit, three flow results, Kane credits, race (none, no green attempt, or picked, each linked to the race folder on GitHub), and links to the report and its text evidence on GitHub.
 8. **Footer.** MIT license, the README link, and a note that evidence is text except for the featured screenshots.
@@ -136,7 +148,7 @@ A green race that the owner closes with `npm run race:close -- NNNN` stays off t
 
 ## Files this task changes
 
-- Race engine: `scripts/race.mjs`, `scripts/lib/race-support.mjs`, `test/race.test.mjs`, `test/race-support.test.mjs`.
+- Race engine: `scripts/race.mjs`, `scripts/race-pick.mjs` (the merge path, shared by the owner's pick and the runner's pick), `scripts/lib/race-support.mjs`, `scripts/lib/compare.mjs` (the comparison's text about picks), `scripts/stop-hook.mjs` (its start message), and the tests `test/race.test.mjs`, `test/race-support.test.mjs`, `test/stop-hook.test.mjs`.
 - Generator and copy step: `scripts/site.mjs`, `scripts/site-featured.mjs`, `test/site.test.mjs`.
 - `.github/workflows/pages.yml`.
 - `package.json`: scripts `site` and `site:featured`.
@@ -152,8 +164,8 @@ A green race that the owner closes with `npm run race:close -- NNNN` stays off t
 ## Acceptance checks
 
 1. `npm run site` builds `site/index.html` from the eight current reports, with all eight rows linked. With no red run yet, the story shows its empty states.
-2. A fixture covers a red run with one failing step with a title and one without, a picked race, and a failed race with an attempt that has no commit. The red, race, and green sections fill in correctly. The failed race reads "No attempt passed", and screenshots appear only where featured.
-3. Engine: a race with no green attempt commits its folder to main, changes no code, and releases the lock. A second race from the same red code starts. A code change after the red report makes the race refuse. An existing `reports/races/NNNN/` is never overwritten.
+2. A fixture covers a red run with one failing step with a title and one without, a picked race by the owner, a picked race by the runner, and a failed race with an attempt that has no commit. The red, race, and green sections fill in correctly. The failed race reads "No attempt passed", and screenshots appear only where featured.
+3. Engine: a race with no green attempt commits its folder to main, changes no code, and releases the lock. A second race from the same red code starts. A code change after the red report makes the race refuse. An existing `reports/races/NNNN/` is never overwritten. A race with exactly one green attempt merges it with no owner command, and its `pick.md` says `Picked by: runner`. If the merged code verifies red, main does not move and the lock stays. A race with two green attempts waits for the owner.
 4. Running the generator twice on the same commit gives identical output.
 5. The generated page contains no Kane login, token, email address, or home path. A test checks this.
 6. Every link on the live page resolves.
@@ -168,6 +180,6 @@ A green race that the owner closes with `npm run race:close -- NNNN` stays off t
 
 ## Owner actions
 
-- Done on 26 Nov: approve the design, choose to show failed races, approve the other-agent task, and approve GitHub Pages with the Actions source.
+- Done on 26 Nov: approve the design, choose to show failed races, approve the other-agent task, approve GitHub Pages with the Actions source, and choose the sole-green auto-merge.
 - Still open: approve flow `poll-create-once` with `npm run flows:approve`. The first red run depends on it.
 - After the page is live: decide the README link and the "no hosted site" line.
