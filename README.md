@@ -10,11 +10,11 @@ Built for the [KaneCLI Online Hackathon](https://www.kaneclihack.sh/) by TestMu 
 
 - Eight verify runs, 0001 to 0008, are committed. All eight are green.
 - The race has not run on a real red yet. It is built and tested with fake racers and a fake verify.
-- Two race rules change before the first real race. A sole green fix will merge without an owner command, and a race with no green fix will commit its records to main. The spec's Fix race section has both rules. Until that change lands, the race sections below describe the current code.
+- Both updated race rules are live on main: a sole green fix merges automatically through the pick path, and a race with no green fix commits its records folder to main.
 - In a scratch run on 25 November, Kane caught a real bug. Double-clicking Create poll made two identical polls. Kane's verdict was `application_issue` at 0.98 confidence. The network log shows two POST requests, both 201. The scratch run is not a verify report, and its evidence pack is not in this repo. The bug is still in the app. The flow that checks for it, `poll-create-once`, waits for the owner's approval.
 - The race gate first checked for `app_bug`. Kane's verdicts use `application_issue`, so a real app fault would not have started a race. The gate now checks `application_issue` (commit `18cb453`). This was fixed before any red run.
 - Committed evidence is text only: network logs, console logs, and failure files. Verify does not copy screenshots into the repo. Kane keeps them in its evidence packs.
-- There is no hosted site. Run the app with `npm start`, or read the reports on GitHub.
+- The static report page is live at [https://etvjay.github.io/broke/](https://etvjay.github.io/broke/), built from committed reports on main by GitHub Actions. Run the poll app locally with `npm start`, or read the raw reports on GitHub.
 - The code is MIT licensed. See [LICENSE](LICENSE).
 
 ## What you need
@@ -41,15 +41,16 @@ Verify uses your Kane CLI login. Sign in with `kane-cli login --oauth`, which op
 
 Check your credits with `kane-cli balance`. Verify stops below 2,000 credits. In the eight committed runs, one verify of all three flows cost 72 to 104 Kane credits, and each flow cost 21 to 38.
 
-You do not need Kane to read the results. Every verify report is committed on main. Each race's records are committed on branch `race/NNNN-report`, and a pick copies them onto main.
+You do not need Kane to read the results. Every verify report is committed on main, and the static report page at [https://etvjay.github.io/broke/](https://etvjay.github.io/broke/) renders them from committed main. A failed race commits its records to main; a sole green attempt merges automatically onto main with its records; a race with two or three green attempts holds its records on branch `race/NNNN-report` until the owner's pick copies them onto main.
 
-## The three flows
+## The four flows
 
 Each flow is plain text in `flows/`. Kane runs the text in a real browser against a fresh copy of the app.
 
 - `poll-create` makes the poll "Lunch spot?" with two options. It checks that a poll with one option is refused.
 - `poll-vote` makes the poll "Favourite colour?" and votes Blue. It checks that the count reads Blue (1).
 - `poll-vote-once` makes the poll "Best tea?" and votes Green. It checks that a second vote from the same browser is refused.
+- `poll-create-once` double-clicks Create poll once for "Double click once?" and fails if two or more polls with that question appear.
 
 ## Verify
 
@@ -103,9 +104,9 @@ After an agent turn that changes `app/` or `explain/`, the Stop hook (`.factory/
 2. Each racer changes only `app/` and `explain/`, and commits its fix.
 3. As soon as a racer exits, the runner verifies its attempt with the same flows and drift check. The next racer starts after that verify ends.
 4. The runner writes `comparison.md`. It lists each attempt's verdicts, drift result, and changed lines. It names no winner.
-5. The owner picks a green attempt: `npm run race:pick -- NNNN a --reason "<why>"`. The runner merges it and verifies the merged code. If that verify is green, main gets the merge, Kane's report on it, and a pick record with the verdict. Otherwise main stays where it was, and the merge, its report, and the record stay on branch `pick/NNNN-<letter>`.
+5. If exactly one attempt is green, the runner merges it through the pick path with no owner command (`pick.md` records `Picked by: runner (the only attempt that passed Kane's verify)`). If two or three attempts are green, the race waits for the owner to pick one: `npm run race:pick -- NNNN a --reason "<why>"` (`pick.md` records `Picked by: owner`). In both paths, the runner merges the attempt and verifies the merged code. If that verify is green, main gets the merge, Kane's report on it, and `pick.md`, and the lock clears. Otherwise main stays where it was, the race keeps its lock, and the merge, its report, and the record stay on branch `pick/NNNN-<letter>`.
 
-If no attempt is green, nothing merges. The records go to branch `race/NNNN-report`, and the race lock clears so the owner can decide the next step. A green race puts its records on the same branch while it waits for the pick. A race runs three attempt verifies, about 230 to 310 Kane credits in total. The owner's pick runs one more verify, about 76 to 104. Droid racers bill Factory credits, a separate budget from Kane credits. One racer on a one-line test change used 54,841 Factory credits. A racer on a real fix is not measured yet.
+If no attempt is green, nothing merges. The race commits its records folder (`reports/races/NNNN/`) to main as `race NNNN: no attempt is green` without changing any app, explanation, or flow file, and clears the race lock so a rerun can start from the same red code. A race with two or three green attempts keeps its records on branch `race/NNNN-report` while it waits for the pick. A race runs three attempt verifies, about 230 to 310 Kane credits in total. The pick runs one more verify, about 76 to 104. Droid racers bill Factory credits, a separate budget from Kane credits. One racer on a one-line test change used 54,841 Factory credits. A racer on a real fix is not measured yet.
 
 If a race stops before it finishes, for example when the machine restarts, its lock goes stale. The next red clears the lock and starts a new race. A lock is stale when the process that holds it has exited. A process id can be reused, so after a restart a lock can look live. Then delete `~/.why-it-broke/race.lock` by hand. Ctrl-C, or a SIGTERM to the race, stops a running racer or attempt verify, and the race then releases its lock. To close a stopped race by hand, run `npm run race:close -- NNNN`.
 
@@ -114,8 +115,9 @@ If a race stops before it finishes, for example when the machine restarts, its l
 Only the owner runs these:
 
 - `npm run flows:approve` records the hash of each flow file after the owner reads it. Verify refuses a flow whose text changed since its approval.
-- `npm run race:pick -- NNNN <a|b|c> --reason "<text>"` merges one green attempt into main.
-- `npm run race:close -- NNNN` clears the lock on a race that has green attempts but no pick, or on a race that stopped.
+- `npm run race:pick -- NNNN <a|b|c> --reason "<text>"` merges one green attempt into main when two or three attempts are green.
+- `npm run race:close -- NNNN` clears the lock on a race that has green attempts waiting for a pick, on a failed auto-merge verify, or on a race that stopped.
+- `npm run site:featured -- NNNN [MMMM]` copies candidate screenshots for a red run (and optional matching green run) outside the repo under `~/.why-it-broke/featured/` for owner review before committing approved images under `reports/featured/`.
 
 ## Agent rules
 
@@ -125,10 +127,11 @@ Only the owner runs these:
 
 ```
 app/        the poll app
-flows/      the three Kane flows and their approvals
+flows/      the four Kane flows and their approvals
 explain/    one plain explanation per app function
 reports/    committed verify reports, evidence, and race records
-scripts/    verify, drift, explain, race, and the Stop hook
+scripts/    verify, drift, explain, race, site, and the Stop hook
+.github/    GitHub Actions workflow for the static report page
 .factory/   the Stop hook config
 docs/       the design spec and the build plan
 ```
