@@ -5,7 +5,7 @@ export const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 export const APP_DIR = join(ROOT, "app");
 export const EXPLAIN_FILE = join(ROOT, "explain", "functions.json");
 
-export const FLOWS = ["poll-create", "poll-vote", "poll-vote-once"];
+export const FLOWS = ["poll-create", "poll-vote", "poll-vote-once", "poll-create-once"];
 export const KANE_BIN = "kane-cli";
 export const CREDIT_FLOOR = 2000;
 // About 4 times the slowest probe run (74.5 s wall).

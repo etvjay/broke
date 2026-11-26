@@ -78,7 +78,7 @@ test("a green run also commits its summary as reports/0001.json", { timeout: 120
   const summary = JSON.parse(await readFile(join(root, "reports", "0001.json"), "utf8"));
   assert.equal(summary.testedCommit, head);
   assert.equal(summary.outcome, "pass");
-  assert.deepEqual(summary.flows.map((flow) => flow.name), ["poll-create.md", "poll-vote.md", "poll-vote-once.md"]);
+  assert.deepEqual(summary.flows.map((flow) => flow.name), ["poll-create.md", "poll-vote.md", "poll-vote-once.md", "poll-create-once.md"]);
   assert.ok(summary.flows[0].trace.length > 0);
 });
 
