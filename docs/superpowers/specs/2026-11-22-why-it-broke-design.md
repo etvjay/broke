@@ -1,7 +1,7 @@
 # Why It Broke: Design
 
 **Date:** 2026-11-22
-**Status:** Draft for review. Replaces the verified-receipts design of the same date. A builder check found five gaps. Each is settled as a call in the sections below and marked. Nothing is built yet.
+**Status:** Built. Verify runs 0001 to 0008 are committed and green. The fix race is tested with fake racers and a fake verify, and it has not run on a real red yet. See the README for the current status. This replaces the verified-receipts design of the same date. A builder check found five gaps. Each is settled as a call in the sections below and marked.
 **Event:** KaneCLI Online Hackathon by TestMu AI ([kaneclihack.sh](https://www.kaneclihack.sh/)). The repo must be initialized on or after 12 Nov 2026. Old ideas are fine, old codebases are not. Submissions close Thu 26 Nov 2026, 11:59 PM IST (10:29 AM PT).
 
 ## Intent
